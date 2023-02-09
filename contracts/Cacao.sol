@@ -3,6 +3,7 @@ pragma solidity ^0.8.10;
 
 import "./IDelegationRegistry.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 /*TODO:  1. Write funciton that recevies info out of contract to invoke delegateForToken
  *       2. keep all the active offers that are being delegated
@@ -15,6 +16,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 error Cacao__WrongIdNumber();
 error Cacao__NotEnoughFunds();
 error Cacao__TransferFailed();
+error Cacao__OfferExists();
+error Cacao__WrongInput();
 
 contract Cacao is Ownable {
     enum OfferStatus {
@@ -26,6 +29,7 @@ contract Cacao is Ownable {
     }
 
     IDelegationRegistry public delegationRegistry;
+    // ICacaoVault public cacaoVault;
     uint256 public offerCounter;
     uint256 public fee;
 
@@ -48,7 +52,11 @@ contract Cacao is Ownable {
     // mapping(address => mapping ()=> uint256)) public offers;
     mapping(address => Offer[]) offersByLender;
 
+    // keeping track of Lenders and Marketplace balances
     mapping(address => uint256) balances;
+
+    // mapping for quick checks whether offer was already created
+    mapping(address => mapping(uint256 => bool)) collectionToToken;
 
     event OfferCreated(
         uint256 price,
@@ -79,6 +87,18 @@ contract Cacao is Ownable {
         address _collection,
         uint256 _duration
     ) public {
+        if (collectionToToken[_collection][_tokenId]) {
+            revert Cacao__OfferExists();
+        }
+        if (_price = 0) {
+            revert Cacao__NotEnoughFunds();
+        }
+        if (_duration < 1 days) {
+            revert Cacao__WrongInput();
+        }
+        if (!IERC721(_collection).ownerOf(_tokenId)) {
+            revert Cacao__WrongInput();
+        }
         Offer memory newOffer = Offer({
             offerId: offerCounter,
             tokenId: _tokenId,

@@ -95,7 +95,7 @@ contract Cacao is Ownable {
         if (collectionToToken[_collection][_tokenId]) {
             revert Cacao__OfferExists();
         }
-        if (_price = 0) {
+        if (_price == 0) {
             revert Cacao__NotEnoughFunds();
         }
         if (_duration < 1 days) {
@@ -103,7 +103,7 @@ contract Cacao is Ownable {
         }
         IERC721 collection = IERC721(_collection);
         address nftOwner = collection.ownerOf(_tokenId);
-        if (!nftOwner) {
+        if (nftOwner != address(0)) {
             revert Cacao__WrongInput();
         }
         if (nftOwner != msg.sender) {
@@ -133,10 +133,10 @@ contract Cacao is Ownable {
         if (offerCounter > _offerId) {
             revert Cacao__OfferNotAvailable();
         }
-        if (offers[_offerId].owner != msg.sender) {
+        if (offers[_offerId].lender != msg.sender) {
             revert Cacao__NotOwner();
         }
-        if (offers[_offerId].status = OfferStatus.AVALIABLE) {
+        if (offers[_offerId].status == OfferStatus.AVALIABLE) {
             revert Cacao__OfferNotAvailable();
         }
         offers[_offerId].status = OfferStatus.CANCELED;

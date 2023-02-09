@@ -18,6 +18,8 @@ error Cacao__NotEnoughFunds();
 error Cacao__TransferFailed();
 error Cacao__OfferExists();
 error Cacao__WrongInput();
+error Cacao__NotOwner();
+error Cacao__OfferNotAvailable();
 
 contract Cacao is Ownable {
     enum OfferStatus {
@@ -87,6 +89,9 @@ contract Cacao is Ownable {
         address _collection,
         uint256 _duration
     ) public {
+        //
+        // TODO: add reentrancy protection
+        //
         if (collectionToToken[_collection][_tokenId]) {
             revert Cacao__OfferExists();
         }
@@ -96,8 +101,13 @@ contract Cacao is Ownable {
         if (_duration < 1 days) {
             revert Cacao__WrongInput();
         }
-        if (!IERC721(_collection).ownerOf(_tokenId)) {
+        IERC721 collection = IERC721(_collection);
+        address nftOwner = collection.ownerOf(_tokenId);
+        if (!nftOwner) {
             revert Cacao__WrongInput();
+        }
+        if (nftOwner != msg.sender) {
+            revert Cacao__NotOwner();
         }
         Offer memory newOffer = Offer({
             offerId: offerCounter,
@@ -113,10 +123,22 @@ contract Cacao is Ownable {
         offersByLender[msg.sender].push(newOffer);
 
         offerCounter++;
+        //
+        // Might be used for offer value updates later
+        //
         emit OfferCreated(_price, _tokenId, _collection, _duration, msg.sender);
     }
 
     function cancelOffer(uint256 _offerId) public {
+        if (offerCounter > _offerId) {
+            revert Cacao__OfferNotAvailable();
+        }
+        if (offers[_offerId].owner != msg.sender) {
+            revert Cacao__NotOwner();
+        }
+        if (offers[_offerId].status = OfferStatus.AVALIABLE) {
+            revert Cacao__OfferNotAvailable();
+        }
         offers[_offerId].status = OfferStatus.CANCELED;
     }
 

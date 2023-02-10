@@ -35,6 +35,8 @@ contract Cacao is Ownable {
     IDelegationRegistry public delegationRegistry;
     CacaoVault public cacaoVault;
     uint256 public offerCounter;
+
+    // 0 - 10%
     uint256 public fee;
 
     // Offers object
@@ -42,6 +44,7 @@ contract Cacao is Ownable {
         uint256 offerId;
         uint256 tokenId;
         uint256 price;
+        uint256 startTime;
         uint256 duration;
         address collection;
         address lender;
@@ -63,6 +66,7 @@ contract Cacao is Ownable {
     mapping(address => mapping(uint256 => bool)) collectionToToken;
 
     event OfferCreated(
+        uint256 id,
         uint256 price,
         uint256 tokenId,
         address collection,
@@ -70,7 +74,8 @@ contract Cacao is Ownable {
         address lender
     );
 
-    event DelegateForToken(
+    event OfferAccepted(
+        uint256 id,
         address vault,
         address delegate,
         address contract_,
@@ -78,13 +83,16 @@ contract Cacao is Ownable {
         bool value
     );
 
-    event OfferCancelled();
+    event OfferCancelled(uint256 id);
 
-    event OfferExecuted();
-
-    constructor(address _delegationRegistry, address _cacaoVault) {
+    constructor(
+        address _delegationRegistry,
+        address _cacaoVault,
+        uint256 _fee
+    ) {
         delegationRegistry = IDelegationRegistry(_delegationRegistry);
         cacaoVault = CacaoVault(_cacaoVault);
+        fee = _fee;
     }
 
     ////////////////////////*** WRITE *** ///////////////////////
@@ -122,6 +130,7 @@ contract Cacao is Ownable {
             offerId: offerCounter,
             tokenId: _tokenId,
             price: _price,
+            startTime: block.timestamp,
             duration: _duration,
             collection: _collection,
             lender: msg.sender,
@@ -131,12 +140,18 @@ contract Cacao is Ownable {
         offers.push(newOffer);
         offersByLender[msg.sender].push(newOffer);
 
-        offerCounter++;
-
         /*
         / Might be used for offer value updates later
         */
-        emit OfferCreated(_price, _tokenId, _collection, _duration, msg.sender);
+        emit OfferCreated(
+            offerCounter,
+            _price,
+            _tokenId,
+            _collection,
+            _duration,
+            msg.sender
+        );
+        offerCounter++;
     }
 
     function cancelOffer(uint256 _offerId) public {
@@ -150,6 +165,8 @@ contract Cacao is Ownable {
             revert Cacao__OfferNotAvailable();
         }
         offers[_offerId].status = OfferStatus.CANCELED;
+
+        emit OfferCancelled(_offerId);
     }
 
     function delegateForToken(
@@ -181,9 +198,12 @@ contract Cacao is Ownable {
             value
         );
 
-        balances[msg.sender] += msg.value;
+        uint256 paymentFee = (msg.value * fee) / 100;
+        balances[offers[offerId].lender] += (msg.value - paymentFee);
+        balances[address(this)] += paymentFee;
         offers[offerId].status = OfferStatus.EXECUTED;
-        emit DelegateForToken(
+        emit OfferAccepted(
+            offerId,
             msg.sender,
             _delegate,
             _collection,
@@ -193,8 +213,8 @@ contract Cacao is Ownable {
     }
 
     /*
-    /*  Not sure if we are going to need this since it's way harder to implement
-    /*  multiple transfer and offer creation
+    /  Not sure if we are going to need this since it's way harder to implement
+    /  multiple transfer and offer creation
     */
     // function delegateForAll(address _delegate) public {
     //     bool value = true;
@@ -208,18 +228,20 @@ contract Cacao is Ownable {
     //     delegationRegistry.delegateForContract(_delegate, _contract, value);
     // }
 
-    function revokeDelegate(address _delegate) public {
-        delegationRegistry.revokeDelegate(_delegate);
-    }
+    /*
+    /   also not sure if we'll need this but leave it here for now
+    */
+    // function revokeDelegate(address _delegate) public {
+    //     delegationRegistry.revokeDelegate(_delegate);
+    // }
 
     function withdrawFees() public onlyOwner {
         uint256 balance = balances[address(this)];
         _withdraw(balance);
     }
 
-    function withdrawByVault() public {
+    function withdrawByLender() public {
         uint256 balance = balances[msg.sender];
-        balances[address(this)] += (balance * fee) / 100;
         _withdraw(balance);
     }
 

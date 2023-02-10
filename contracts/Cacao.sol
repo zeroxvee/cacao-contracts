@@ -33,7 +33,7 @@ contract Cacao is Ownable {
     }
 
     IDelegationRegistry public delegationRegistry;
-    CacaoVault public cacaoVault;
+    // CacaoVault public cacaoVault;
     uint256 public offerCounter;
 
     // 0 - 10%
@@ -85,13 +85,10 @@ contract Cacao is Ownable {
 
     event OfferCancelled(uint256 id);
 
-    constructor(
-        address _delegationRegistry,
-        address _cacaoVault,
-        uint256 _fee
-    ) {
+    // address _cacaoVault,
+    // cacaoVault = CacaoVault(_cacaoVault);
+    constructor(address _delegationRegistry, uint256 _fee) {
         delegationRegistry = IDelegationRegistry(_delegationRegistry);
-        cacaoVault = CacaoVault(_cacaoVault);
         fee = _fee;
     }
 
@@ -124,8 +121,8 @@ contract Cacao is Ownable {
         if (nftOwner != msg.sender) {
             revert Cacao__NotOwner();
         }
-        collection.approve(address(cacaoVault), _tokenId);
-        collection.safeTransferFrom(msg.sender, address(cacaoVault), _tokenId);
+        collection.approve(address(this), _tokenId);
+        collection.safeTransferFrom(msg.sender, address(this), _tokenId);
         Offer memory newOffer = Offer({
             offerId: offerCounter,
             tokenId: _tokenId,
@@ -245,9 +242,13 @@ contract Cacao is Ownable {
         _withdraw(balance);
     }
 
+    /*
+     *   Add security check, only owner of NFT can withdraw
+     *   only can withdraw if deal has been completed
+     */
     function withdrawNft(address _collection, uint256 _tokenId) public {
         IERC721 collection = IERC721(_collection);
-        collection.safeTransferFrom(address(cacaoVault), msg.sender, _tokenId);
+        collection.safeTransferFrom(address(this), msg.sender, _tokenId);
     }
 
     function _withdraw(uint256 balance) internal {

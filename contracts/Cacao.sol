@@ -245,6 +245,11 @@ contract Cacao is Ownable {
         _withdraw(balance);
     }
 
+    function withdrawNft(address _collection, uint256 _tokenId) public {
+        IERC721 collection = IERC721(_collection);
+        collection.safeTransferFrom(address(cacaoVault), msg.sender, _tokenId);
+    }
+
     function _withdraw(uint256 balance) internal {
         balance = address(this).balance;
         if (balance == 0) {

@@ -9,5 +9,8 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
  */
 
 contract CacaoVault is ERC721 {
-    constructor() {}
+    constructor(
+        string memory _name,
+        string memory _symbol
+    ) ERC721(_name, _symbol) {}
 }

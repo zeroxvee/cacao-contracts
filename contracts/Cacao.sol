@@ -2,6 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "./IDelegationRegistry.sol";
+import "./CacaoVault.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
@@ -20,6 +21,7 @@ error Cacao__OfferExists();
 error Cacao__WrongInput();
 error Cacao__NotOwner();
 error Cacao__OfferNotAvailable();
+error Cacao__WrongAddress();
 
 contract Cacao is Ownable {
     enum OfferStatus {
@@ -31,7 +33,7 @@ contract Cacao is Ownable {
     }
 
     IDelegationRegistry public delegationRegistry;
-    // ICacaoVault public cacaoVault;
+    CacaoVault public cacaoVault;
     uint256 public offerCounter;
     uint256 public fee;
 
@@ -76,8 +78,13 @@ contract Cacao is Ownable {
         bool value
     );
 
-    constructor(address _delegationRegistry) {
+    event OfferCancelled();
+
+    event OfferExecuted();
+
+    constructor(address _delegationRegistry, address _cacaoVault) {
         delegationRegistry = IDelegationRegistry(_delegationRegistry);
+        cacaoVault = CacaoVault(_cacaoVault);
     }
 
     ////////////////////////*** WRITE *** ///////////////////////
@@ -109,6 +116,8 @@ contract Cacao is Ownable {
         if (nftOwner != msg.sender) {
             revert Cacao__NotOwner();
         }
+        collection.approve(address(cacaoVault), _tokenId);
+        collection.safeTransferFrom(msg.sender, address(cacaoVault), _tokenId);
         Offer memory newOffer = Offer({
             offerId: offerCounter,
             tokenId: _tokenId,
@@ -123,9 +132,10 @@ contract Cacao is Ownable {
         offersByLender[msg.sender].push(newOffer);
 
         offerCounter++;
-        //
-        // Might be used for offer value updates later
-        //
+
+        /*
+        / Might be used for offer value updates later
+        */
         emit OfferCreated(_price, _tokenId, _collection, _duration, msg.sender);
     }
 
@@ -144,7 +154,7 @@ contract Cacao is Ownable {
 
     function delegateForToken(
         address _delegate,
-        address _contract,
+        address _collection,
         uint256 _tokenId,
         uint256 offerId
     ) public payable {
@@ -154,10 +164,19 @@ contract Cacao is Ownable {
         if (offers[offerId].price <= msg.value) {
             revert Cacao__NotEnoughFunds();
         }
+        if (_collection != address(0) && _delegate != address(0)) {
+            revert Cacao__WrongAddress();
+        }
+        IERC721 collection = IERC721(_collection);
+        address nftOwner = collection.ownerOf(_tokenId);
+        if (nftOwner != msg.sender) {
+            revert Cacao__NotOwner();
+        }
+
         bool value = true;
         delegationRegistry.delegateForToken(
             _delegate,
-            _contract,
+            _collection,
             _tokenId,
             value
         );
@@ -167,21 +186,27 @@ contract Cacao is Ownable {
         emit DelegateForToken(
             msg.sender,
             _delegate,
-            _contract,
+            _collection,
             _tokenId,
             value
         );
     }
 
-    function delegateForAll(address _delegate) public {
-        bool value = true;
-        delegationRegistry.delegateForAll(_delegate, value);
-    }
+    /*
+    /*  Not sure if we are going to need this since it's way harder to implement
+    /*  multiple transfer and offer creation
+    */
+    // function delegateForAll(address _delegate) public {
+    //     bool value = true;
+    //     delegationRegistry.delegateForAll(_delegate, value);
+    // }
 
-    function delegateForContract(address _delegate, address _contract) public {
-        bool value = true;
-        delegationRegistry.delegateForContract(_delegate, _contract, value);
-    }
+    // also will remove this for now
+    //
+    // function delegateForContract(address _delegate, address _contract) public {
+    //     bool value = true;
+    //     delegationRegistry.delegateForContract(_delegate, _contract, value);
+    // }
 
     function revokeDelegate(address _delegate) public {
         delegationRegistry.revokeDelegate(_delegate);

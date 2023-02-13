@@ -32,8 +32,8 @@ contract Cacao is Ownable {
         COMPLETED
     }
 
-    IDelegationRegistry public delegationRegistry;
-    // CacaoVault public cacaoVault;
+    address public delegationRegistry;
+    address public cacaoVault;
     uint256 public offerCounter;
 
     // 0 - 10%
@@ -87,8 +87,13 @@ contract Cacao is Ownable {
 
     // address _cacaoVault,
     // cacaoVault = CacaoVault(_cacaoVault);
-    constructor(address _delegationRegistry, uint256 _fee) {
-        delegationRegistry = IDelegationRegistry(_delegationRegistry);
+    constructor(
+        address _delegationRegistry,
+        address _cacaoVault,
+        uint256 _fee
+    ) {
+        delegationRegistry = _delegationRegistry;
+        cacaoVault = _cacaoVault;
         fee = _fee;
     }
 
@@ -108,21 +113,13 @@ contract Cacao is Ownable {
             revert Cacao__OfferExists();
         }
         if (_price == 0) {
-            revert Cacao__NotEnoughFunds();
+            revert Cacao__WrongInput();
         }
         if (_duration < 1 days) {
             revert Cacao__WrongInput();
         }
-        IERC721 collection = IERC721(_collection);
-        address nftOwner = collection.ownerOf(_tokenId);
-        if (nftOwner != address(0)) {
-            revert Cacao__WrongInput();
-        }
-        if (nftOwner != msg.sender) {
-            revert Cacao__NotOwner();
-        }
-        collection.approve(address(this), _tokenId);
-        collection.safeTransferFrom(msg.sender, address(this), _tokenId);
+        IERC721(_collection).transferFrom(msg.sender, cacaoVault, _tokenId);
+        collectionToToken[_collection][_tokenId] = true;
         Offer memory newOffer = Offer({
             offerId: offerCounter,
             tokenId: _tokenId,
@@ -188,7 +185,7 @@ contract Cacao is Ownable {
         }
 
         bool value = true;
-        delegationRegistry.delegateForToken(
+        IDelegationRegistry(delegationRegistry).delegateForToken(
             _delegate,
             _collection,
             _tokenId,
@@ -272,12 +269,8 @@ contract Cacao is Ownable {
         uint256 tokenId
     ) public view returns (bool result) {
         return
-            result = delegationRegistry.checkDelegateForToken(
-                _delegate,
-                _vault,
-                _contract,
-                tokenId
-            );
+            result = IDelegationRegistry(delegationRegistry)
+                .checkDelegateForToken(_delegate, _vault, _contract, tokenId);
     }
 
     function getAllOffers() public view returns (Offer[] memory) {

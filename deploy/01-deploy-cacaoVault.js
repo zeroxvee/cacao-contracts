@@ -4,7 +4,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
 
-    const args = []
+    const name = "CacaoVaultToken"
+    const symbol = "CVT"
+    const args = [name, symbol]
     const cacao = await deploy("CacaoVault", {
         from: deployer,
         args: args,
@@ -15,4 +17,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log("------------------------------------------------------")
 }
 
-module.exports.tags = ["cacaoVault"]
+module.exports.tags = ["cacaoVault", "all"]

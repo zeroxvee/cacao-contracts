@@ -23,6 +23,9 @@ error Cacao__NotOwner();
 error Cacao__OfferNotAvailable();
 error Cacao__WrongAddress();
 
+/*
+*   @dev cacao v1.0
+*/
 contract Cacao is Ownable {
     enum OfferStatus {
         NOT_INITIATED,
@@ -63,7 +66,8 @@ contract Cacao is Ownable {
     mapping(address => uint256) balances;
 
     // mapping for quick checks whether offer was already created
-    mapping(address => mapping(uint256 => bool)) collectionToToken;
+    // 0 - deactive/not created, any other # - offerID
+    mapping(address => mapping(uint256 => uint256)) tokenToOfferId;
 
     event OfferCreated(
         uint256 id,
@@ -78,15 +82,13 @@ contract Cacao is Ownable {
         uint256 id,
         address vault,
         address delegate,
-        address contract_,
+        address contract,
         uint256 tokenId,
         bool value
     );
 
-    event OfferCancelled(uint256 id);
+    event OfferCancelled(address collection, uint256 tokenId, uint256 offerId);
 
-    // address _cacaoVault,
-    // cacaoVault = CacaoVault(_cacaoVault);
     constructor(
         address _delegationRegistry,
         address _cacaoVault,
@@ -109,7 +111,7 @@ contract Cacao is Ownable {
         //
         // TODO: add reentrancy protection
         //
-        if (collectionToToken[_collection][_tokenId]) {
+        if (tokenToOfferId[_collection][_tokenId]) {
             revert Cacao__OfferExists();
         }
         if (_price == 0) {
@@ -118,8 +120,8 @@ contract Cacao is Ownable {
         if (_duration < 1 days) {
             revert Cacao__WrongInput();
         }
+
         IERC721(_collection).transferFrom(msg.sender, cacaoVault, _tokenId);
-        collectionToToken[_collection][_tokenId] = true;
         Offer memory newOffer = Offer({
             offerId: offerCounter,
             tokenId: _tokenId,
@@ -131,6 +133,7 @@ contract Cacao is Ownable {
             borrower: address(0),
             status: OfferStatus.AVALIABLE
         });
+                tokenToOfferId[_collection][_tokenId] = offerCounter;
         offers.push(newOffer);
         offersByLender[msg.sender].push(newOffer);
 
@@ -148,19 +151,21 @@ contract Cacao is Ownable {
         offerCounter++;
     }
 
-    function cancelOffer(uint256 _offerId) public {
+    function cancelOffer(address _collection, uint256 _tokenId, uint256 _offerId) public {
+        Offer memory offer = offers[_offerId]
         if (offerCounter > _offerId) {
             revert Cacao__OfferNotAvailable();
         }
-        if (offers[_offerId].lender != msg.sender) {
+        if (offer.lender != msg.sender) {
             revert Cacao__NotOwner();
         }
-        if (offers[_offerId].status == OfferStatus.AVALIABLE) {
+        if (offer.status == OfferStatus.AVALIABLE) {
             revert Cacao__OfferNotAvailable();
         }
-        offers[_offerId].status = OfferStatus.CANCELED;
 
-        emit OfferCancelled(_offerId);
+        offer.status = OfferStatus.CANCELED;
+        delete tokenToOfferId[_collection][_tokenId];
+        emit OfferCancelled(_collection, _tokenId,_offerId);
     }
 
     function acceptOffer(
@@ -168,10 +173,11 @@ contract Cacao is Ownable {
         uint256 _tokenId,
         uint256 offerId
     ) public payable {
-        if (offers[offerId].status != OfferStatus.AVALIABLE) {
+        Offer memory offer = offers[_offerId]
+        if (offer.status != OfferStatus.AVALIABLE) {
             revert Cacao__OfferNotAvailable();
         }
-        if (offers[offerId].price > msg.value) {
+        if (offer.price > msg.value) {
             revert Cacao__NotEnoughFunds();
         }
         if (_collection == address(0)) {
@@ -187,13 +193,13 @@ contract Cacao is Ownable {
         );
 
         uint256 paymentFee = (msg.value * fee) / 100;
-        balances[offers[offerId].lender] += (msg.value - paymentFee);
+        balances[offer.lender] += (msg.value - paymentFee);
         balances[address(this)] += paymentFee;
-        offers[offerId].status = OfferStatus.EXECUTED;
+        offer.status = OfferStatus.EXECUTED;
         emit OfferAccepted(
             offerId,
             msg.sender,
-            offers[offerId].lender,
+            offer.lender,
             _collection,
             _tokenId,
             value

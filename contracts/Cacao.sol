@@ -22,10 +22,11 @@ error Cacao__WrongInput();
 error Cacao__NotOwner();
 error Cacao__OfferNotAvailable();
 error Cacao__WrongAddress();
+error Cacao__OfferIsActive();
 
 /*
-*   @dev cacao v1.0
-*/
+ *   @dev cacao v1.0
+ */
 contract Cacao is Ownable {
     enum OfferStatus {
         NOT_INITIATED,
@@ -82,7 +83,7 @@ contract Cacao is Ownable {
         uint256 id,
         address vault,
         address delegate,
-        address contract,
+        address collection,
         uint256 tokenId,
         bool value
     );
@@ -111,7 +112,7 @@ contract Cacao is Ownable {
         //
         // TODO: add reentrancy protection
         //
-        if (tokenToOfferId[_collection][_tokenId]) {
+        if (tokenToOfferId[_collection][_tokenId] > 0) {
             revert Cacao__OfferExists();
         }
         if (_price == 0) {
@@ -133,7 +134,7 @@ contract Cacao is Ownable {
             borrower: address(0),
             status: OfferStatus.AVALIABLE
         });
-                tokenToOfferId[_collection][_tokenId] = offerCounter;
+        tokenToOfferId[_collection][_tokenId] = offerCounter;
         offers.push(newOffer);
         offersByLender[msg.sender].push(newOffer);
 
@@ -151,8 +152,12 @@ contract Cacao is Ownable {
         offerCounter++;
     }
 
-    function cancelOffer(address _collection, uint256 _tokenId, uint256 _offerId) public {
-        Offer memory offer = offers[_offerId]
+    function cancelOffer(
+        address _collection,
+        uint256 _tokenId,
+        uint256 _offerId
+    ) public {
+        Offer memory offer = offers[_offerId];
         if (offerCounter > _offerId) {
             revert Cacao__OfferNotAvailable();
         }
@@ -165,15 +170,15 @@ contract Cacao is Ownable {
 
         offer.status = OfferStatus.CANCELED;
         delete tokenToOfferId[_collection][_tokenId];
-        emit OfferCancelled(_collection, _tokenId,_offerId);
+        emit OfferCancelled(_collection, _tokenId, _offerId);
     }
 
     function acceptOffer(
         address _collection,
         uint256 _tokenId,
-        uint256 offerId
+        uint256 _offerId
     ) public payable {
-        Offer memory offer = offers[_offerId]
+        Offer memory offer = offers[_offerId];
         if (offer.status != OfferStatus.AVALIABLE) {
             revert Cacao__OfferNotAvailable();
         }
@@ -197,7 +202,7 @@ contract Cacao is Ownable {
         balances[address(this)] += paymentFee;
         offer.status = OfferStatus.EXECUTED;
         emit OfferAccepted(
-            offerId,
+            _offerId,
             msg.sender,
             offer.lender,
             _collection,
@@ -205,29 +210,6 @@ contract Cacao is Ownable {
             value
         );
     }
-
-    /*
-    /  Not sure if we are going to need this since it's way harder to implement
-    /  multiple transfer and offer creation
-    */
-    // function delegateForAll(address _delegate) public {
-    //     bool value = true;
-    //     delegationRegistry.delegateForAll(_delegate, value);
-    // }
-
-    // also will remove this for now
-    //
-    // function delegateForContract(address _delegate, address _contract) public {
-    //     bool value = true;
-    //     delegationRegistry.delegateForContract(_delegate, _contract, value);
-    // }
-
-    /*
-    /   also not sure if we'll need this but leave it here for now
-    */
-    // function revokeDelegate(address _delegate) public {
-    //     delegationRegistry.revokeDelegate(_delegate);
-    // }
 
     function withdrawFees() public onlyOwner {
         uint256 balance = balances[address(this)];
@@ -239,15 +221,6 @@ contract Cacao is Ownable {
         _withdraw(balance);
     }
 
-    /*
-     *   Add security check, only owner of NFT can withdraw
-     *   only can withdraw if deal has been completed
-     */
-    function withdrawNft(address _collection, uint256 _tokenId) public {
-        IERC721 collection = IERC721(_collection);
-        collection.safeTransferFrom(address(this), msg.sender, _tokenId);
-    }
-
     function _withdraw(uint256 balance) internal {
         balance = address(this).balance;
         if (balance == 0) {
@@ -257,6 +230,33 @@ contract Cacao is Ownable {
             value: address(this).balance
         }("");
         if (!callResult) revert Cacao__TransferFailed();
+    }
+
+    /*
+     *
+     *   Only can withdraw if deal has been completed
+     *   v1 - doesn't allow withdrawal until rent duration has passed
+     */
+    function withdrawNft(address _collection, uint256 _tokenId) public {
+        uint256 offerId = tokenToOfferId[_collection][_tokenId];
+        Offer memory offer = offers[offerId];
+
+        if (offer.startTime + offer.duration > block.timestamp) {
+            revert Cacao__OfferIsActive();
+        }
+
+        address owner = IERC721(_collection).ownerOf(_tokenId);
+        if (owner != msg.sender) {
+            revert Cacao__NotOwner();
+        }
+
+        delete tokenToOfferId[_collection][_tokenId];
+        offer.status = OfferStatus.COMPLETED;
+        IERC721(_collection).safeTransferFrom(
+            address(this),
+            msg.sender,
+            _tokenId
+        );
     }
 
     ////////////////////////*** READ *** ///////////////////////

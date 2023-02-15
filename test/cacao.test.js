@@ -18,17 +18,26 @@ describe("Cacao", () => {
         Cacao = await ethers.getContract("Cacao", deployer)
         CacaoVault = await ethers.getContract("CacaoVault", deployer)
         Fbayc = await ethers.getContract("FakeBoredApeYachtClub", deployer)
+
+        console.log(deployer.address + " deployer")
+        console.log(borrower.address + " borrower")
+        console.log(Delegator.address + " delegator")
+        console.log(Cacao.address + " cacao")
+        console.log(CacaoVault.address + " cacao vault")
+        console.log(Fbayc.address + " fbayc")
+
+        collection = Fbayc.address
+        tokenId = 0
+        price = ethers.utils.parseEther("1")
+        duration = 86400
     })
 
     describe("createOffer", () => {
         beforeEach(async () => {
             await Fbayc.safeMint(deployer.address)
             await Fbayc.setApprovalForAll(Cacao.address, true)
-            collection = Fbayc.address
-            tokenId = 0
-            price = ethers.utils.parseEther("1")
-            duration = 86400
         })
+
         it("reverts if offer already exists", async () => {
             await Cacao.createOffer(price, tokenId, collection, duration)
             const anotherTx = Cacao.createOffer(
@@ -41,11 +50,6 @@ describe("Cacao", () => {
                 Cacao,
                 "Cacao__OfferExists"
             )
-        })
-
-        it("emits OfferCreated event", async () => {
-            const tx = Cacao.createOffer(price, tokenId, collection, duration)
-            await expect(tx).to.emit(Cacao, "OfferCreated")
         })
 
         it("reverts if offer price set is 0", async () => {
@@ -66,10 +70,20 @@ describe("Cacao", () => {
             )
         })
 
+        it("emits OfferCreated event", async () => {
+            const tx = Cacao.createOffer(price, tokenId, collection, duration)
+            await expect(tx).to.emit(Cacao, "OfferCreated")
+        })
+
         it("adds new offer to offers[]", async () => {
             expect((await Cacao.getAllOffers()).length).to.be.equal(0)
             await Cacao.createOffer(price, tokenId, collection, duration)
             expect((await Cacao.getAllOffers()).length).to.be.equal(1)
+        })
+
+        it("transfers NFT asset to Cacao Vault", async () => {
+            await Cacao.createOffer(price, tokenId, collection, duration)
+            expect(await Fbayc.ownerOf(tokenId)).to.be.equal(CacaoVault.address)
         })
 
         it("adds new offer to offerByLender mapping", async () => {
@@ -86,6 +100,61 @@ describe("Cacao", () => {
             expect(await Cacao.offerCounter()).to.be.equal(0)
             await Cacao.createOffer(price, tokenId, collection, duration)
             expect(await Cacao.offerCounter()).to.be.equal(1)
+        })
+    })
+
+    describe("delegateForToken = accept offer", () => {
+        beforeEach(async () => {
+            await Fbayc.safeMint(deployer.address)
+            await Fbayc.setApprovalForAll(Cacao.address, true)
+            await Cacao.createOffer(price, tokenId, collection, duration)
+        })
+
+        it("reverts if offer status != OfferStatus.AVALIABLE", async () => {
+            const offerId = 0
+            const newCacao = Cacao.connect(borrower)
+            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId)
+            const tx = newCacao.acceptOffer(Fbayc.address, tokenId, offerId)
+            await expect(tx).to.be.revertedWithCustomError(
+                Cacao,
+                "Cacao__OfferNotAvailable"
+            )
+        })
+
+        it("reverts if borrower didnt sent enough funds", async () => {
+            const offerId = 0
+            const newCacao = Cacao.connect(borrower)
+            await expect(
+                newCacao.acceptOffer(Fbayc.address, tokenId, offerId)
+            ).to.be.revertedWithCustomError(Cacao, "Cacao__NotEnoughFunds")
+        })
+
+        it("reverts if collection is 0 address", async () => {
+            const offerId = 0
+            const newCacao = Cacao.connect(borrower)
+            await expect(
+                newCacao.acceptOffer(
+                    ethers.constants.AddressZero,
+                    tokenId,
+                    offerId
+                )
+            ).to.be.revertedWithCustomError(Cacao, "Cacao__NotEnoughFunds")
+        })
+
+        it("check if delegation was successful", async () => {
+            const offerId = 0
+            const newCacao = Cacao.connect(borrower)
+            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+                value: price,
+            })
+            expect(
+                await Delegator.checkDelegateForToken(
+                    borrower.address,
+                    Cacao.address,
+                    Fbayc.address,
+                    tokenId
+                )
+            ).to.be.equal(true)
         })
     })
 })

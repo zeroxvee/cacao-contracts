@@ -17,4 +17,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log("------------------------------------------------------")
 }
 
-module.exports.tags = ["cacaoVault", "all"]
+module.exports.tags = ["cacaoVault", "all", "cacaos"]

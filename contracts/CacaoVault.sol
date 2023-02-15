@@ -13,4 +13,6 @@ contract CacaoVault is ERC721 {
         string memory _name,
         string memory _symbol
     ) ERC721(_name, _symbol) {}
+
+    mapping(address => mapping(address => uint256)) tokenToOfferId;
 }

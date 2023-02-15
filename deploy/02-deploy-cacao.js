@@ -4,11 +4,15 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
     const chainId = network.config.chainId
-    const delegatorLocal = (await ethers.getContract("DelegationRegistry", deployer)).address
+    const delegatorLocal = (
+        await ethers.getContract("DelegationRegistry", deployer)
+    ).address
     const delegatorGoerli = "0x00000000000076A84feF008CDAbe6409d2FE638B"
-    const delegator = network.config.chainId == 31337 ? delegatorLocal : delegatorGoerli;
-    const fee = 3;
-    const cacaoVault = (await ethers.getContract("CacaoVault", deployer)).address
+    const delegator =
+        network.config.chainId == 31337 ? delegatorLocal : delegatorGoerli
+    const fee = 3
+    const cacaoVault = (await ethers.getContract("CacaoVault", deployer))
+        .address
 
     const args = [delegator, cacaoVault, fee]
     const cacao = await deploy("Cacao", {
@@ -21,4 +25,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log("------------------------------------------------------")
 }
 
-module.exports.tags = ["cacao", "all"]
+module.exports.tags = ["cacao", "all", "cacaos"]

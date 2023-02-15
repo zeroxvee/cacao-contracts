@@ -19,13 +19,6 @@ describe("Cacao", () => {
         CacaoVault = await ethers.getContract("CacaoVault", deployer)
         Fbayc = await ethers.getContract("FakeBoredApeYachtClub", deployer)
 
-        console.log(deployer.address + " deployer")
-        console.log(borrower.address + " borrower")
-        console.log(Delegator.address + " delegator")
-        console.log(Cacao.address + " cacao")
-        console.log(CacaoVault.address + " cacao vault")
-        console.log(Fbayc.address + " fbayc")
-
         collection = Fbayc.address
         tokenId = 0
         price = ethers.utils.parseEther("1")
@@ -97,9 +90,9 @@ describe("Cacao", () => {
         })
 
         it("offer counter increment", async () => {
-            expect(await Cacao.offerCounter()).to.be.equal(0)
-            await Cacao.createOffer(price, tokenId, collection, duration)
             expect(await Cacao.offerCounter()).to.be.equal(1)
+            await Cacao.createOffer(price, tokenId, collection, duration)
+            expect(await Cacao.offerCounter()).to.be.equal(2)
         })
     })
 
@@ -113,12 +106,14 @@ describe("Cacao", () => {
         it("reverts if offer status != OfferStatus.AVALIABLE", async () => {
             const offerId = 0
             const newCacao = Cacao.connect(borrower)
-            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId)
-            const tx = newCacao.acceptOffer(Fbayc.address, tokenId, offerId)
-            await expect(tx).to.be.revertedWithCustomError(
-                Cacao,
-                "Cacao__OfferNotAvailable"
-            )
+            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+                value: price,
+            })
+            await expect(
+                newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+                    value: price,
+                })
+            ).to.be.revertedWithCustomError(Cacao, "Cacao__OfferNotAvailable")
         })
 
         it("reverts if borrower didnt sent enough funds", async () => {
@@ -136,9 +131,10 @@ describe("Cacao", () => {
                 newCacao.acceptOffer(
                     ethers.constants.AddressZero,
                     tokenId,
-                    offerId
+                    offerId,
+                    { value: price }
                 )
-            ).to.be.revertedWithCustomError(Cacao, "Cacao__NotEnoughFunds")
+            ).to.be.revertedWithCustomError(Cacao, "Cacao__WrongAddress")
         })
 
         it("check if delegation was successful", async () => {

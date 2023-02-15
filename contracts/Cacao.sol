@@ -163,30 +163,24 @@ contract Cacao is Ownable {
         emit OfferCancelled(_offerId);
     }
 
-    function delegateForToken(
-        address _delegate,
+    function acceptOffer(
         address _collection,
         uint256 _tokenId,
         uint256 offerId
     ) public payable {
         if (offers[offerId].status != OfferStatus.AVALIABLE) {
-            revert Cacao__WrongIdNumber();
+            revert Cacao__OfferNotAvailable();
         }
-        if (offers[offerId].price <= msg.value) {
+        if (offers[offerId].price > msg.value) {
             revert Cacao__NotEnoughFunds();
         }
-        if (_collection != address(0) && _delegate != address(0)) {
+        if (_collection == address(0)) {
             revert Cacao__WrongAddress();
-        }
-        IERC721 collection = IERC721(_collection);
-        address nftOwner = collection.ownerOf(_tokenId);
-        if (nftOwner != msg.sender) {
-            revert Cacao__NotOwner();
         }
 
         bool value = true;
         IDelegationRegistry(delegationRegistry).delegateForToken(
-            _delegate,
+            msg.sender,
             _collection,
             _tokenId,
             value
@@ -199,7 +193,7 @@ contract Cacao is Ownable {
         emit OfferAccepted(
             offerId,
             msg.sender,
-            _delegate,
+            offers[offerId].lender,
             _collection,
             _tokenId,
             value

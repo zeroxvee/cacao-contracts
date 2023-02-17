@@ -157,7 +157,7 @@ contract Cacao is Ownable {
         uint256 _tokenId,
         uint256 _offerId
     ) public {
-        Offer memory offer = offers[_offerId];
+        Offer storage offer = offers[_offerId];
         if (offerCounter > _offerId) {
             revert Cacao__OfferNotAvailable();
         }
@@ -178,7 +178,7 @@ contract Cacao is Ownable {
         uint256 _tokenId,
         uint256 _offerId
     ) public payable {
-        Offer memory offer = offers[_offerId];
+        Offer storage offer = offers[_offerId];
         if (offer.status != OfferStatus.AVALIABLE) {
             revert Cacao__OfferNotAvailable();
         }
@@ -281,5 +281,13 @@ contract Cacao is Ownable {
         address lender
     ) public view returns (Offer[] memory) {
         return offersByLender[lender];
+    }
+
+    function getOfferById(uint256 offerId) public view returns (Offer memory) {
+        return offers[offerId];
+    }
+
+    function getEthBalance(address user) public view returns (uint256) {
+        return balances[user];
     }
 }

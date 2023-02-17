@@ -4,7 +4,7 @@ const { network, deployments, ethers, getNamedAccounts } = require("hardhat")
 describe("Cacao", () => {
     let Cacao, Fbayc, Delegator
     let deployer, lender, borrower
-    let tokenId, price, duration, collection
+    let tokenId, price, duration, collection, fee
 
     beforeEach(async () => {
         const accounts = await ethers.getSigners()
@@ -23,6 +23,7 @@ describe("Cacao", () => {
         tokenId = 0
         price = ethers.utils.parseEther("1")
         duration = 86400
+        fee = 3
     })
 
     describe("createOffer", () => {
@@ -63,15 +64,34 @@ describe("Cacao", () => {
             )
         })
 
-        it("emits OfferCreated event", async () => {
-            const tx = Cacao.createOffer(price, tokenId, collection, duration)
-            await expect(tx).to.emit(Cacao, "OfferCreated")
-        })
-
         it("adds new offer to offers[]", async () => {
             expect((await Cacao.getAllOffers()).length).to.be.equal(0)
             await Cacao.createOffer(price, tokenId, collection, duration)
             expect((await Cacao.getAllOffers()).length).to.be.equal(1)
+        })
+
+        it("properly initialized offer data", async () => {
+            const offerId = 0
+            await Cacao.createOffer(price, tokenId, collection, duration)
+            const offer = await Cacao.getOfferById(offerId)
+
+            expect(offer.offerId).equal(1)
+            expect(offer.tokenId).equal(tokenId)
+            expect(offer.price).equal(price)
+            // it("initialized block.timestamp", async() => {
+            //     expect(offer.offerId).equal(1)
+            //     ethers.utils.t
+            // })
+            expect(offer.duration).equal(duration)
+            expect(offer.collection).equal(Fbayc.address)
+            expect(offer.lender).equal(deployer.address)
+            expect(offer.borrower).equal(ethers.constants.AddressZero)
+            expect(offer.status).equal(1)
+        })
+
+        it("transfers NFT asset to Cacao Vault", async () => {
+            await Cacao.createOffer(price, tokenId, collection, duration)
+            expect(await Fbayc.ownerOf(tokenId)).to.be.equal(CacaoVault.address)
         })
 
         it("transfers NFT asset to Cacao Vault", async () => {
@@ -89,14 +109,19 @@ describe("Cacao", () => {
             ).to.be.equal(1)
         })
 
-        it("offer counter increment", async () => {
+        it("emits OfferCreated event", async () => {
+            const tx = Cacao.createOffer(price, tokenId, collection, duration)
+            await expect(tx).to.emit(Cacao, "OfferCreated")
+        })
+
+        it("offerCounter increments after offer created", async () => {
             expect(await Cacao.offerCounter()).to.be.equal(1)
             await Cacao.createOffer(price, tokenId, collection, duration)
             expect(await Cacao.offerCounter()).to.be.equal(2)
         })
     })
 
-    describe("delegateForToken = accept offer", () => {
+    describe("acceptOffer", () => {
         beforeEach(async () => {
             await Fbayc.safeMint(deployer.address)
             await Fbayc.setApprovalForAll(Cacao.address, true)
@@ -151,6 +176,46 @@ describe("Cacao", () => {
                     tokenId
                 )
             ).to.be.equal(true)
+        })
+
+        it("updates lenders balance", async () => {
+            const offerId = 0
+            const newCacao = Cacao.connect(borrower)
+            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+                value: price,
+            })
+
+            const balance = BigInt(price - (price * 3) / 100)
+            expect(await Cacao.getEthBalance(deployer.address)).equal(balance)
+        })
+
+        it("taking the fee and updates the marketplace balance", async () => {
+            const offerId = 0
+            const newCacao = Cacao.connect(borrower)
+            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+                value: price,
+            })
+
+            const balance = BigInt((price * 3) / 100)
+            expect(await Cacao.getEthBalance(Cacao.address)).equal(balance)
+        })
+
+        it("updates offer status to offerStatus.EXECUTED", async () => {
+            const offerId = 0
+            const newCacao = Cacao.connect(borrower)
+            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+                value: price,
+            })
+            expect((await Cacao.getOfferById(offerId)).status).equal(2)
+        })
+
+        it("emits OfferAccepted event", async () => {
+            const offerId = 0
+            const newCacao = Cacao.connect(borrower)
+            const tx = newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+                value: price,
+            })
+            await expect(tx).to.emit(Cacao, "OfferAccepted")
         })
     })
 })

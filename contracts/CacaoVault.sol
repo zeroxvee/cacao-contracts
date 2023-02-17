@@ -14,5 +14,15 @@ contract CacaoVault is ERC721 {
         string memory _symbol
     ) ERC721(_name, _symbol) {}
 
-    mapping(address => mapping(address => uint256)) tokenToOfferId;
+    address private cacao;
+
+    // NFT collection address => tokenID => Owner address
+    mapping(address => mapping(uint256 => address)) tokenIdToOwner;
+
+    // NFT collection address => tokenID => offerID
+    mapping(address => mapping(uint256 => uint256)) tokenToOfferId;
+
+    function setCacaoAddress(address _cacao) external {
+        cacao = _cacao;
+    }
 }

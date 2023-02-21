@@ -122,7 +122,6 @@ contract Cacao is Ownable {
             revert Cacao__WrongInput();
         }
 
-        IERC721(_collection).transferFrom(msg.sender, cacaoVault, _tokenId);
         Offer memory newOffer = Offer({
             offerId: offerCounter,
             tokenId: _tokenId,
@@ -134,6 +133,13 @@ contract Cacao is Ownable {
             borrower: address(0),
             status: OfferStatus.AVALIABLE
         });
+
+        CacaoVault(cacaoVault).depositNft(
+            _collection,
+            _tokenId,
+            msg.sender,
+            _duration
+        );
         tokenToOfferId[_collection][_tokenId] = offerCounter;
         offers.push(newOffer);
         offersByLender[msg.sender].push(newOffer);
@@ -252,11 +258,7 @@ contract Cacao is Ownable {
 
         delete tokenToOfferId[_collection][_tokenId];
         offer.status = OfferStatus.COMPLETED;
-        IERC721(_collection).safeTransferFrom(
-            address(this),
-            msg.sender,
-            _tokenId
-        );
+        CacaoVault(cacaoVault).withdrawNft(_collection, _tokenId, msg.sender);
     }
 
     ////////////////////////*** READ *** ///////////////////////

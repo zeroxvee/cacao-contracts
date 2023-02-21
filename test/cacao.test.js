@@ -18,6 +18,7 @@ describe("Cacao", () => {
         Cacao = await ethers.getContract("Cacao", deployer)
         CacaoVault = await ethers.getContract("CacaoVault", deployer)
         Fbayc = await ethers.getContract("FakeBoredApeYachtClub", deployer)
+        await CacaoVault.setMarketplaceAddress(Cacao.address)
 
         collection = Fbayc.address
         tokenId = 0
@@ -29,7 +30,7 @@ describe("Cacao", () => {
     describe("createOffer", () => {
         beforeEach(async () => {
             await Fbayc.safeMint(deployer.address)
-            await Fbayc.setApprovalForAll(Cacao.address, true)
+            await Fbayc.setApprovalForAll(CacaoVault.address, true)
         })
 
         it("reverts if offer already exists", async () => {
@@ -91,11 +92,6 @@ describe("Cacao", () => {
             expect(await Fbayc.ownerOf(tokenId)).to.be.equal(CacaoVault.address)
         })
 
-        it("transfers NFT asset to Cacao Vault", async () => {
-            await Cacao.createOffer(price, tokenId, collection, duration)
-            expect(await Fbayc.ownerOf(tokenId)).to.be.equal(CacaoVault.address)
-        })
-
         it("adds new offer to offerByLender mapping", async () => {
             expect(
                 (await Cacao.getOfferByLender(deployer.address)).length
@@ -121,11 +117,11 @@ describe("Cacao", () => {
     describe("acceptOffer", () => {
         beforeEach(async () => {
             await Fbayc.safeMint(deployer.address)
-            await Fbayc.setApprovalForAll(Cacao.address, true)
+            await Fbayc.setApprovalForAll(CacaoVault.address, true)
             await Cacao.createOffer(price, tokenId, collection, duration)
         })
 
-        it("reverts if offer status != OfferStatus.AVALIABLE", async () => {
+        it("reverts accept call if offer status != OfferStatus.AVALIABLE", async () => {
             const offerId = 0
             const newCacao = Cacao.connect(borrower)
             await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
@@ -213,6 +209,59 @@ describe("Cacao", () => {
                 value: price,
             })
             await expect(tx).to.emit(Cacao, "OfferAccepted")
+        })
+    })
+
+    describe("cancelOffer", () => {
+        beforeEach(async () => {
+            await Fbayc.safeMint(deployer.address)
+            await Fbayc.setApprovalForAll(CacaoVault.address, true)
+            await Cacao.createOffer(price, tokenId, collection, duration)
+        })
+
+        it("reverts if offer doesn't exist", async () => {
+            const offerId = 5
+            await expect(Cacao.cancelOffer(Fbayc.address, tokenId, offerId)).to
+                .be.reverted
+        })
+
+        it("reverts if called by NOT NFT owner", async () => {
+            const offerId = 0
+            const newCacao = Cacao.connect(borrower)
+            await expect(
+                newCacao.cancelOffer(Fbayc.address, tokenId, offerId)
+            ).to.be.revertedWithCustomError(Cacao, "Cacao__NotOwner")
+        })
+
+        it("reverts cancel call if offer status != OfferStatus.AVAILABLE", async () => {
+            const offerId = 0
+            const newCacao = Cacao.connect(borrower)
+            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+                value: price,
+            })
+            await expect(
+                Cacao.cancelOffer(Fbayc.address, tokenId, offerId)
+            ).to.be.revertedWithCustomError(Cacao, "Cacao__OfferNotAvailable")
+        })
+
+        it("changes offer status to OfferStatus.CANCELED", async () => {
+            const offerId = 0
+            await Cacao.cancelOffer(Fbayc.address, tokenId, offerId)
+            const offer = await Cacao.getOfferById(0)
+            expect(offer.status).equal(3)
+        })
+
+        it("deletes offer data from quick access mapping", async () => {
+            const offerId = 0
+            await Cacao.cancelOffer(Fbayc.address, tokenId, offerId)
+            expect(await Cacao.getOfferByTokenId(collection, tokenId)).equal(0)
+        })
+
+        it("emits OfferCanceled event", async () => {
+            const offerId = 0
+            await expect(
+                Cacao.cancelOffer(Fbayc.address, tokenId, offerId)
+            ).to.emit(Cacao, "OfferCanceled")
         })
     })
 })

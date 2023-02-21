@@ -30,7 +30,7 @@ error Cacao__OfferIsActive();
 contract Cacao is Ownable {
     enum OfferStatus {
         NOT_INITIATED,
-        AVALIABLE,
+        AVAILABLE,
         EXECUTED,
         CANCELED,
         COMPLETED
@@ -67,7 +67,8 @@ contract Cacao is Ownable {
     mapping(address => uint256) balances;
 
     // mapping for quick checks whether offer was already created
-    // 0 - deactive/not created, any other # - offerID
+    // NFT address => tokenId => offerId
+    // 0 - canceled/not created, any other # - offerID
     mapping(address => mapping(uint256 => uint256)) tokenToOfferId;
 
     event OfferCreated(
@@ -88,7 +89,7 @@ contract Cacao is Ownable {
         bool value
     );
 
-    event OfferCancelled(address collection, uint256 tokenId, uint256 offerId);
+    event OfferCanceled(address collection, uint256 tokenId, uint256 offerId);
 
     constructor(
         address _delegationRegistry,
@@ -131,7 +132,7 @@ contract Cacao is Ownable {
             collection: _collection,
             lender: msg.sender,
             borrower: address(0),
-            status: OfferStatus.AVALIABLE
+            status: OfferStatus.AVAILABLE
         });
 
         CacaoVault(cacaoVault).depositNft(
@@ -164,19 +165,16 @@ contract Cacao is Ownable {
         uint256 _offerId
     ) public {
         Offer storage offer = offers[_offerId];
-        if (offerCounter > _offerId) {
-            revert Cacao__OfferNotAvailable();
-        }
         if (offer.lender != msg.sender) {
             revert Cacao__NotOwner();
         }
-        if (offer.status == OfferStatus.AVALIABLE) {
+        if (offer.status != OfferStatus.AVAILABLE) {
             revert Cacao__OfferNotAvailable();
         }
 
         offer.status = OfferStatus.CANCELED;
         delete tokenToOfferId[_collection][_tokenId];
-        emit OfferCancelled(_collection, _tokenId, _offerId);
+        emit OfferCanceled(_collection, _tokenId, _offerId);
     }
 
     function acceptOffer(
@@ -185,7 +183,7 @@ contract Cacao is Ownable {
         uint256 _offerId
     ) public payable {
         Offer storage offer = offers[_offerId];
-        if (offer.status != OfferStatus.AVALIABLE) {
+        if (offer.status != OfferStatus.AVAILABLE) {
             revert Cacao__OfferNotAvailable();
         }
         if (offer.price > msg.value) {
@@ -287,6 +285,13 @@ contract Cacao is Ownable {
 
     function getOfferById(uint256 offerId) public view returns (Offer memory) {
         return offers[offerId];
+    }
+
+    function getOfferByTokenId(
+        address collection,
+        uint256 tokenId
+    ) public view returns (uint256) {
+        return tokenToOfferId[collection][tokenId];
     }
 
     function getEthBalance(address user) public view returns (uint256) {

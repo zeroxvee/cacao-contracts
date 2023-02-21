@@ -89,7 +89,7 @@ contract Cacao is Ownable {
         bool value
     );
 
-    event OfferCanceled(address collection, uint256 tokenId, uint256 offerId);
+    event OfferCanceled .(address collection, uint256 tokenId, uint256 offerId);
 
     constructor(
         address _delegationRegistry,
@@ -174,7 +174,7 @@ contract Cacao is Ownable {
 
         offer.status = OfferStatus.CANCELED;
         delete tokenToOfferId[_collection][_tokenId];
-        emit OfferCanceled(_collection, _tokenId, _offerId);
+        emit OfferCanceled .(_collection, _tokenId, _offerId);
     }
 
     function acceptOffer(

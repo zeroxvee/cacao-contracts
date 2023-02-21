@@ -73,15 +73,12 @@ describe("Cacao", () => {
         it("properly initialized offer data", async () => {
             const offerId = 0
             await Cacao.createOffer(price, tokenId, collection, duration)
+            const timestamp = (await ethers.provider.getBlock()).timestamp
             const offer = await Cacao.getOfferById(offerId)
-
             expect(offer.offerId).equal(1)
             expect(offer.tokenId).equal(tokenId)
             expect(offer.price).equal(price)
-            // it("initialized block.timestamp", async() => {
-            //     expect(offer.offerId).equal(1)
-            //     ethers.utils.t
-            // })
+            expect(offer.startTime).equal(timestamp)
             expect(offer.duration).equal(duration)
             expect(offer.collection).equal(Fbayc.address)
             expect(offer.lender).equal(deployer.address)

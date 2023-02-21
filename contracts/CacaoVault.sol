@@ -24,14 +24,14 @@ contract CacaoVault is ERC721 {
     mapping(address => mapping(uint256 => Offer)) tokenIdToOffer;
 
     // NFT collection address => tokenID => offerID
-    mapping(address => mapping(uint256 => uint256)) tokenToOfferId;
+    // mapping(address => mapping(uint256 => uint256)) tokenToOfferId;
 
     struct Offer {
         address nftOwner;
         uint256 duration;
     }
 
-    function setCacaoAddress(address _cacao) external {
+    function setMarketplaceAddress(address _cacao) external {
         cacao = _cacao;
     }
 

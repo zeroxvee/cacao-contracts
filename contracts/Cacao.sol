@@ -38,7 +38,7 @@ contract Cacao is Ownable {
 
     address public delegationRegistry;
     address public cacaoVault;
-    uint256 public offerCounter = 0;
+    uint256 public offerCounter = 1;
 
     // 0 - 10%
     uint256 public fee;
@@ -99,6 +99,7 @@ contract Cacao is Ownable {
         delegationRegistry = _delegationRegistry;
         cacaoVault = _cacaoVault;
         fee = _fee;
+        offers.push();
     }
 
     ////////////////////////*** WRITE *** ///////////////////////

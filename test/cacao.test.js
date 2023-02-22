@@ -264,4 +264,46 @@ describe("Cacao", () => {
             ).to.emit(Cacao, "OfferCanceled")
         })
     })
+
+    describe("withdrawNft", () => {
+        beforeEach(async () => {
+            const offerId = 0
+            await Fbayc.safeMint(deployer.address)
+            await Fbayc.setApprovalForAll(CacaoVault.address, true)
+            await Cacao.createOffer(price, tokenId, collection, duration)
+            const newCacao = Cacao.connect(borrower)
+            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+                value: price,
+            })
+        })
+
+        it("reverts if offer is still active", async () => {
+            console.log("works")
+            console.log((await Cacao.getOfferById(0)).offerId)
+            console.log(await Cacao.getOfferByTokenId(collection, tokenId))
+            await expect(
+                Cacao.withdrawNft(collection, tokenId)
+            ).to.be.revertedWithCustomError(Cacao, "Cacao__OfferIsActive")
+        })
+
+        it("reverts if called by not NFT owner", async () => {
+            await network.provider.send("evm_increaseTime", [duration])
+            const newCacao = Cacao.connect(borrower)
+            await expect(
+                newCacao.withdrawNft(collection, tokenId)
+            ).to.be.revertedWithCustomError(Cacao, "Cacao__NotOwner")
+        })
+
+        it("deletes mapping for quick access prior to withdrawal", async () => {
+            await network.provider.send("evm_increaseTime", [duration])
+            await Cacao.withdrawNft(collection, tokenId)
+            expect(await Cacao.getOfferByTokenId(collection, tokenId)).equal(0)
+        })
+
+        it("transfer NFT back to the owner", async () => {
+            await network.provider.send("evm_increaseTime", [duration])
+            await Cacao.withdrawNft(collection, tokenId)
+            expect(await Fbayc.ownerOf(tokenId)).equal(deployer.address)
+        })
+    })
 })

@@ -38,7 +38,7 @@ contract Cacao is Ownable {
 
     address public delegationRegistry;
     address public cacaoVault;
-    uint256 public offerCounter = 1;
+    uint256 public offerCounter = 0;
 
     // 0 - 10%
     uint256 public fee;
@@ -89,7 +89,7 @@ contract Cacao is Ownable {
         bool value
     );
 
-    event OfferCanceled .(address collection, uint256 tokenId, uint256 offerId);
+    event OfferCanceled(address collection, uint256 tokenId, uint256 offerId);
 
     constructor(
         address _delegationRegistry,
@@ -174,7 +174,7 @@ contract Cacao is Ownable {
 
         offer.status = OfferStatus.CANCELED;
         delete tokenToOfferId[_collection][_tokenId];
-        emit OfferCanceled .(_collection, _tokenId, _offerId);
+        emit OfferCanceled(_collection, _tokenId, _offerId);
     }
 
     function acceptOffer(
@@ -249,8 +249,7 @@ contract Cacao is Ownable {
             revert Cacao__OfferIsActive();
         }
 
-        address owner = IERC721(_collection).ownerOf(_tokenId);
-        if (owner != msg.sender) {
+        if (offer.lender != msg.sender) {
             revert Cacao__NotOwner();
         }
 

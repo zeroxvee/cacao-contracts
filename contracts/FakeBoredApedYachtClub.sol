@@ -17,9 +17,11 @@ contract FakeBoredApeYachtClub is ERC721, Ownable {
             "https://us-central1-bayc-metadata.cloudfunctions.net/api/tokens/";
     }
 
-    function safeMint(address to) public onlyOwner {
+    function safeMint(uint256 amount, address to) public {
         uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
+        for (uint256 i = 0; i < amount; i++) {
+            _tokenIdCounter.increment();
+            _safeMint(to, tokenId);
+        }
     }
 }

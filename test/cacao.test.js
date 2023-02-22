@@ -2,9 +2,9 @@ const { assert, expect } = require("chai")
 const { network, deployments, ethers, getNamedAccounts } = require("hardhat")
 
 describe("Cacao", () => {
-    let Cacao, Fbayc, Delegator
+    let Cacao, Fbayc, Delegator, borrowerCacao
     let deployer, lender, borrower
-    let tokenId, price, duration, collection, fee
+    let tokenId, price, duration, collection, fee, offerId
 
     beforeEach(async () => {
         const accounts = await ethers.getSigners()
@@ -25,6 +25,8 @@ describe("Cacao", () => {
         price = ethers.utils.parseEther("1")
         duration = 86400
         fee = 3
+        offerId = 1
+        borrowerCacao = Cacao.connect(borrower)
     })
 
     describe("createOffer", () => {
@@ -66,13 +68,12 @@ describe("Cacao", () => {
         })
 
         it("adds new offer to offers[]", async () => {
-            expect((await Cacao.getAllOffers()).length).to.be.equal(0)
-            await Cacao.createOffer(price, tokenId, collection, duration)
             expect((await Cacao.getAllOffers()).length).to.be.equal(1)
+            await Cacao.createOffer(price, tokenId, collection, duration)
+            expect((await Cacao.getAllOffers()).length).to.be.equal(2)
         })
 
         it("properly initialized offer data", async () => {
-            const offerId = 0
             await Cacao.createOffer(price, tokenId, collection, duration)
             const timestamp = (await ethers.provider.getBlock()).timestamp
             const offer = await Cacao.getOfferById(offerId)
@@ -122,31 +123,25 @@ describe("Cacao", () => {
         })
 
         it("reverts accept call if offer status != OfferStatus.AVALIABLE", async () => {
-            const offerId = 0
-            const newCacao = Cacao.connect(borrower)
-            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+            await borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
                 value: price,
             })
             await expect(
-                newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+                borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
                     value: price,
                 })
             ).to.be.revertedWithCustomError(Cacao, "Cacao__OfferNotAvailable")
         })
 
         it("reverts if borrower didnt sent enough funds", async () => {
-            const offerId = 0
-            const newCacao = Cacao.connect(borrower)
             await expect(
-                newCacao.acceptOffer(Fbayc.address, tokenId, offerId)
+                borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId)
             ).to.be.revertedWithCustomError(Cacao, "Cacao__NotEnoughFunds")
         })
 
         it("reverts if collection is 0 address", async () => {
-            const offerId = 0
-            const newCacao = Cacao.connect(borrower)
             await expect(
-                newCacao.acceptOffer(
+                borrowerCacao.acceptOffer(
                     ethers.constants.AddressZero,
                     tokenId,
                     offerId,
@@ -156,9 +151,7 @@ describe("Cacao", () => {
         })
 
         it("check if delegation was successful", async () => {
-            const offerId = 0
-            const newCacao = Cacao.connect(borrower)
-            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+            await borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
                 value: price,
             })
             expect(
@@ -172,9 +165,7 @@ describe("Cacao", () => {
         })
 
         it("updates lenders balance", async () => {
-            const offerId = 0
-            const newCacao = Cacao.connect(borrower)
-            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+            await borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
                 value: price,
             })
 
@@ -183,9 +174,7 @@ describe("Cacao", () => {
         })
 
         it("taking the fee and updates the marketplace balance", async () => {
-            const offerId = 0
-            const newCacao = Cacao.connect(borrower)
-            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+            await borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
                 value: price,
             })
 
@@ -194,20 +183,21 @@ describe("Cacao", () => {
         })
 
         it("updates offer status to offerStatus.EXECUTED", async () => {
-            const offerId = 0
-            const newCacao = Cacao.connect(borrower)
-            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+            await borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
                 value: price,
             })
             expect((await Cacao.getOfferById(offerId)).status).equal(2)
         })
 
         it("emits OfferAccepted event", async () => {
-            const offerId = 0
-            const newCacao = Cacao.connect(borrower)
-            const tx = newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
-                value: price,
-            })
+            const tx = borrowerCacao.acceptOffer(
+                Fbayc.address,
+                tokenId,
+                offerId,
+                {
+                    value: price,
+                }
+            )
             await expect(tx).to.emit(Cacao, "OfferAccepted")
         })
     })
@@ -220,23 +210,20 @@ describe("Cacao", () => {
         })
 
         it("reverts if offer doesn't exist", async () => {
-            const offerId = 5
+            offerId = 5
             await expect(Cacao.cancelOffer(Fbayc.address, tokenId, offerId)).to
                 .be.reverted
         })
 
         it("reverts if called by NOT NFT owner", async () => {
-            const offerId = 0
-            const newCacao = Cacao.connect(borrower)
+            offerId = 0
             await expect(
-                newCacao.cancelOffer(Fbayc.address, tokenId, offerId)
+                borrowerCacao.cancelOffer(Fbayc.address, tokenId, offerId)
             ).to.be.revertedWithCustomError(Cacao, "Cacao__NotOwner")
         })
 
         it("reverts cancel call if offer status != OfferStatus.AVAILABLE", async () => {
-            const offerId = 0
-            const newCacao = Cacao.connect(borrower)
-            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+            await borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
                 value: price,
             })
             await expect(
@@ -245,20 +232,17 @@ describe("Cacao", () => {
         })
 
         it("changes offer status to OfferStatus.CANCELED", async () => {
-            const offerId = 0
             await Cacao.cancelOffer(Fbayc.address, tokenId, offerId)
-            const offer = await Cacao.getOfferById(0)
+            const offer = await Cacao.getOfferById(offerId)
             expect(offer.status).equal(3)
         })
 
         it("deletes offer data from quick access mapping", async () => {
-            const offerId = 0
             await Cacao.cancelOffer(Fbayc.address, tokenId, offerId)
             expect(await Cacao.getOfferByTokenId(collection, tokenId)).equal(0)
         })
 
         it("emits OfferCanceled event", async () => {
-            const offerId = 0
             await expect(
                 Cacao.cancelOffer(Fbayc.address, tokenId, offerId)
             ).to.emit(Cacao, "OfferCanceled")
@@ -267,20 +251,15 @@ describe("Cacao", () => {
 
     describe("withdrawNft", () => {
         beforeEach(async () => {
-            const offerId = 0
             await Fbayc.safeMint(deployer.address)
             await Fbayc.setApprovalForAll(CacaoVault.address, true)
             await Cacao.createOffer(price, tokenId, collection, duration)
-            const newCacao = Cacao.connect(borrower)
-            await newCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
+            await borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
                 value: price,
             })
         })
 
         it("reverts if offer is still active", async () => {
-            console.log("works")
-            console.log((await Cacao.getOfferById(0)).offerId)
-            console.log(await Cacao.getOfferByTokenId(collection, tokenId))
             await expect(
                 Cacao.withdrawNft(collection, tokenId)
             ).to.be.revertedWithCustomError(Cacao, "Cacao__OfferIsActive")
@@ -288,9 +267,8 @@ describe("Cacao", () => {
 
         it("reverts if called by not NFT owner", async () => {
             await network.provider.send("evm_increaseTime", [duration])
-            const newCacao = Cacao.connect(borrower)
             await expect(
-                newCacao.withdrawNft(collection, tokenId)
+                borrowerCacao.withdrawNft(collection, tokenId)
             ).to.be.revertedWithCustomError(Cacao, "Cacao__NotOwner")
         })
 

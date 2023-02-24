@@ -32,7 +32,7 @@ contract CacaoVault is ERC721 {
         address lender;
         uint256 duration;
         uint256 collection;
-        uint256 utilityTokenId
+        uint256 utilityTokenId;
     }
 
     function setMarketplaceAddress(address _cacao) external {
@@ -59,10 +59,7 @@ contract CacaoVault is ERC721 {
         _mint(_owner, tokenCounter);
     }
 
-    function transferFrom(
-        address to,
-        uint256 tokenId
-    ) public override {
+    function transferFrom(address to, uint256 tokenId) public override {
         bool value = true;
         IDelegationRegistry(delegationRegistry).delegateForToken(
             msg.sender,

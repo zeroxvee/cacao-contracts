@@ -135,7 +135,8 @@ contract Cacao is Ownable {
             borrower: address(0),
             status: OfferStatus.AVAILABLE
         });
-
+        address owner = IERC721(_collection).ownerOf(_tokenId);
+        if (owner == cacaoVault) {}
         CacaoVault(cacaoVault).depositToVault(
             _collection,
             _tokenId,

@@ -136,7 +136,7 @@ contract Cacao is Ownable {
             status: OfferStatus.AVAILABLE
         });
 
-        CacaoVault(cacaoVault).depositNft(
+        CacaoVault(cacaoVault).depositToVault(
             _collection,
             _tokenId,
             msg.sender,
@@ -194,14 +194,7 @@ contract Cacao is Ownable {
             revert Cacao__WrongAddress();
         }
 
-        bool value = true;
-        IDelegationRegistry(delegationRegistry).delegateForToken(
-            msg.sender,
-            _collection,
-            _tokenId,
-            value
-        );
-
+        cacaoVault.transferFrom(msg.sender, _tokenId, _offerId);
         uint256 paymentFee = (msg.value * fee) / 100;
         balances[offer.lender] += (msg.value - paymentFee);
         balances[address(this)] += paymentFee;

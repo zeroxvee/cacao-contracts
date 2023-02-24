@@ -4,7 +4,7 @@ const { network, deployments, ethers, getNamedAccounts } = require("hardhat")
 describe("Cacao", () => {
     let Cacao, Fbayc, Delegator, borrowerCacao
     let deployer, lender, borrower
-    let tokenId, price, duration, collection, fee, offerId
+    let tokenId, price, duration, collection, fee, offerId, amount
 
     beforeEach(async () => {
         const accounts = await ethers.getSigners()
@@ -26,12 +26,13 @@ describe("Cacao", () => {
         duration = 86400
         fee = 3
         offerId = 1
+        amount = 1
         borrowerCacao = Cacao.connect(borrower)
     })
 
     describe("createOffer", () => {
         beforeEach(async () => {
-            await Fbayc.safeMint(deployer.address)
+            await Fbayc.safeMint(amount, deployer.address)
             await Fbayc.setApprovalForAll(CacaoVault.address, true)
         })
 
@@ -117,7 +118,7 @@ describe("Cacao", () => {
 
     describe("acceptOffer", () => {
         beforeEach(async () => {
-            await Fbayc.safeMint(deployer.address)
+            await Fbayc.safeMint(amount, deployer.address)
             await Fbayc.setApprovalForAll(CacaoVault.address, true)
             await Cacao.createOffer(price, tokenId, collection, duration)
         })
@@ -204,7 +205,7 @@ describe("Cacao", () => {
 
     describe("cancelOffer", () => {
         beforeEach(async () => {
-            await Fbayc.safeMint(deployer.address)
+            await Fbayc.safeMint(amount, deployer.address)
             await Fbayc.setApprovalForAll(CacaoVault.address, true)
             await Cacao.createOffer(price, tokenId, collection, duration)
         })
@@ -251,7 +252,7 @@ describe("Cacao", () => {
 
     describe("withdrawNft", () => {
         beforeEach(async () => {
-            await Fbayc.safeMint(deployer.address)
+            await Fbayc.safeMint(amount, deployer.address)
             await Fbayc.setApprovalForAll(CacaoVault.address, true)
             await Cacao.createOffer(price, tokenId, collection, duration)
             await borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {

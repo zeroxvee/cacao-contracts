@@ -126,23 +126,17 @@ contract Cacao is Ownable {
 
         Offer memory newOffer = Offer({
             offerId: offerCounter,
+            collection: _collection,
             tokenId: _tokenId,
             price: _price,
             startTime: block.timestamp,
             duration: _duration,
-            collection: _collection,
             lender: msg.sender,
             borrower: address(0),
             status: OfferStatus.AVAILABLE
         });
-        address owner = IERC721(_collection).ownerOf(_tokenId);
-        if (owner == cacaoVault) {}
-        CacaoVault(cacaoVault).depositToVault(
-            _collection,
-            _tokenId,
-            msg.sender,
-            _duration
-        );
+
+        CacaoVault(cacaoVault).depositToVault(newOffer);
         tokenToOfferId[_collection][_tokenId] = offerCounter;
         offers.push(newOffer);
         offersByLender[msg.sender].push(newOffer);

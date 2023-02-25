@@ -25,13 +25,16 @@ contract CacaoVault is ERC721 {
     // NFT collection address => tokenID => Owner address
     mapping(address => mapping(uint256 => Offer)) tokenIdToOffer;
 
+    mapping(uint256 => Offer) utilityTokenToOffer;
+
     // NFT collection address => tokenID => offerID
     // mapping(address => mapping(uint256 => uint256)) tokenToOfferId;
 
     struct Offer {
         address lender;
         uint256 duration;
-        uint256 collection;
+        address collection;
+        uint256 tokenId;
         uint256 utilityTokenId;
     }
 
@@ -44,30 +47,35 @@ contract CacaoVault is ERC721 {
      *   NFT-U holder has all the right and utilies that come with NFT assest deposited
      *   and the check will be happending thru delegate.cash
      */
-    function depositToVault(
-        address _collection,
-        uint256 _tokenId,
-        address _owner,
-        uint256 _duration
-    ) external {
-        address owner = IERC721(_collection).ownerOf(_tokenId);
-        require(msg.sender == owner || msg.sender == cacao, "Not owner");
-        IERC721(_collection).transferFrom(_owner, address(this), _tokenId);
-        Offer memory newOffer = tokenIdToOffer[_collection][_tokenId];
-        newOffer.nftOwner = _owner;
-        newOffer.duration = _duration;
-        _mint(_owner, tokenCounter);
+    function depositToVault(Offer memory offer) external {
+        require(msg.sender == cacao, "Not owner");
+        IERC721(offer.collection).transferFrom(
+            offer.lender,
+            address(this),
+            offer.tokenId
+        );
+        Offer memory newOffer = tokenIdToOffer[offer.collection][offer.tokenId];
+        newOffer.lender = offer.lender;
+        newOffer.duration = offer.duration;
+        _mint(offer.lender, tokenCounter);
     }
 
     function transferFrom(address to, uint256 tokenId) public override {
         bool value = true;
+        super.transferFrom(msg.sender, to, tokenId);
+        Offer memory offer = utilityTokenToOffer[tokenId];
         IDelegationRegistry(delegationRegistry).delegateForToken(
-            msg.sender,
-            _collection,
-            _tokenId,
-            value
+            to,
+            offer.collection,
+            offer.tokenId,
+            false
         );
-        super.transferFrom(from, to, tokenId);
+        IDelegationRegistry(delegationRegistry).delegateForToken(
+            to,
+            offer.collection,
+            offer.tokenId,
+            true
+        );
     }
 
     /*

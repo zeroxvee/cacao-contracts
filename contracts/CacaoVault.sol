@@ -12,15 +12,16 @@ import "./IDelegationRegistry.sol";
 contract CacaoVault is ERC721 {
     constructor(
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        address _delegationRegistry
     ) ERC721(_name, _symbol) {
-        _mint(msg.sender, tokenCounter);
-        tokenCounter++;
+        delegationRegistry = _delegationRegistry;
+        _mint(msg.sender, 0);
     }
 
     address public delegationRegistry;
     address private cacao;
-    uint256 tokenCounter;
+    uint256 tokenCounter = 1;
 
     // NFT collection address => tokenID => Owner address
     mapping(address => mapping(uint256 => Offer)) tokenIdToOffer;
@@ -40,6 +41,7 @@ contract CacaoVault is ERC721 {
 
     function setMarketplaceAddress(address _cacao) external {
         cacao = _cacao;
+        ERC721.setApprovalForAll(_cacao, true);
     }
 
     /*
@@ -47,36 +49,55 @@ contract CacaoVault is ERC721 {
      *   NFT-U holder has all the right and utilies that come with NFT assest deposited
      *   and the check will be happending thru delegate.cash
      */
-    function depositToVault(Offer memory offer) external {
+    function depositToVault(
+        address _collection,
+        uint256 _tokenId,
+        uint256 _duration,
+        address _lender
+    ) external returns (uint256) {
         require(msg.sender == cacao, "Not owner");
-        IERC721(offer.collection).transferFrom(
-            offer.lender,
-            address(this),
-            offer.tokenId
+        IERC721(_collection).transferFrom(_lender, address(this), _tokenId);
+        Offer memory newOffer = tokenIdToOffer[_collection][_tokenId];
+        _mint(_lender, tokenCounter);
+        IDelegationRegistry(delegationRegistry).delegateForToken(
+            _lender,
+            _collection,
+            _tokenId,
+            true
         );
-        Offer memory newOffer = tokenIdToOffer[offer.collection][offer.tokenId];
-        newOffer.lender = offer.lender;
-        newOffer.duration = offer.duration;
-        _mint(offer.lender, tokenCounter);
+
+        uint256 utilityToken = tokenCounter;
+        newOffer.lender = _lender;
+        newOffer.duration = _duration;
+        newOffer.utilityTokenId = tokenCounter++;
+
+        return utilityToken;
     }
 
-    function transferFrom(address to, uint256 tokenId) public override {
-        bool value = true;
-        super.transferFrom(msg.sender, to, tokenId);
+    function transferFrom(address to, uint256 tokenId) public {
         Offer memory offer = utilityTokenToOffer[tokenId];
+        address owner = ERC721.ownerOf(tokenId);
+        ERC721.transferFrom(owner, to, tokenId);
         IDelegationRegistry(delegationRegistry).delegateForToken(
-            to,
+            owner,
             offer.collection,
-            offer.tokenId,
+            tokenId,
             false
         );
         IDelegationRegistry(delegationRegistry).delegateForToken(
             to,
             offer.collection,
-            offer.tokenId,
+            tokenId,
             true
         );
     }
+
+    function transferDelegate(
+        address from,
+        address to,
+        address collection,
+        uint256 tokenId
+    ) public {}
 
     /*
      *   When called by NFT asset owner => burns NFT-U token,
@@ -89,10 +110,7 @@ contract CacaoVault is ERC721 {
         address ownerAddress
     ) external {
         Offer memory offer = tokenIdToOffer[collection][tokenId];
-        require(
-            msg.sender == offer.nftOwner || msg.sender == cacao,
-            "Not owner"
-        );
+        require(msg.sender == offer.lender || msg.sender == cacao, "Not owner");
         IERC721(collection).safeTransferFrom(
             address(this),
             ownerAddress,

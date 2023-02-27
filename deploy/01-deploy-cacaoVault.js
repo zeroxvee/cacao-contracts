@@ -4,9 +4,16 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
 
+    const delegatorLocal = (
+        await ethers.getContract("DelegationRegistry", deployer)
+    ).address
+    const delegatorGoerli = "0x00000000000076A84feF008CDAbe6409d2FE638B"
+    const delegator =
+        network.config.chainId == 31337 ? delegatorLocal : delegatorGoerli
+
     const name = "CacaoVaultToken"
     const symbol = "CVT"
-    const args = [name, symbol]
+    const args = [name, symbol, delegator]
     const cacao = await deploy("CacaoVault", {
         from: deployer,
         args: args,

@@ -51,6 +51,7 @@ contract Cacao is Ownable {
         uint256 startTime;
         uint256 duration;
         address collection;
+        uint256 utilityTokenId;
         address lender;
         address borrower;
         OfferStatus status;
@@ -85,8 +86,7 @@ contract Cacao is Ownable {
         address vault,
         address delegate,
         address collection,
-        uint256 tokenId,
-        bool value
+        uint256 tokenId
     );
 
     event OfferCanceled(address collection, uint256 tokenId, uint256 offerId);
@@ -124,6 +124,13 @@ contract Cacao is Ownable {
             revert Cacao__WrongInput();
         }
 
+        uint256 _utilityTokenId = CacaoVault(cacaoVault).depositToVault(
+            _collection,
+            _tokenId,
+            _duration,
+            msg.sender
+        );
+
         Offer memory newOffer = Offer({
             offerId: offerCounter,
             collection: _collection,
@@ -133,10 +140,9 @@ contract Cacao is Ownable {
             duration: _duration,
             lender: msg.sender,
             borrower: address(0),
+            utilityTokenId: _utilityTokenId,
             status: OfferStatus.AVAILABLE
         });
-
-        CacaoVault(cacaoVault).depositToVault(newOffer);
         tokenToOfferId[_collection][_tokenId] = offerCounter;
         offers.push(newOffer);
         offersByLender[msg.sender].push(newOffer);
@@ -189,7 +195,7 @@ contract Cacao is Ownable {
             revert Cacao__WrongAddress();
         }
 
-        cacaoVault.transferFrom(msg.sender, _tokenId, _offerId);
+        CacaoVault(cacaoVault).transferFrom(msg.sender, offer.utilityTokenId);
         uint256 paymentFee = (msg.value * fee) / 100;
         balances[offer.lender] += (msg.value - paymentFee);
         balances[address(this)] += paymentFee;
@@ -199,8 +205,7 @@ contract Cacao is Ownable {
             msg.sender,
             offer.lender,
             _collection,
-            _tokenId,
-            value
+            _tokenId
         );
     }
 

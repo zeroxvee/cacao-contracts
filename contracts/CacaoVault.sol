@@ -56,7 +56,7 @@ contract CacaoVault is ERC721 {
         address _lender
     ) external returns (uint256) {
         require(msg.sender == cacao, "Not owner");
-        IERC721(_collection).transferFrom(_lender, address(this), _tokenId);
+        ERC721(_collection).transferFrom(_lender, address(this), _tokenId);
         Offer memory newOffer = tokenIdToOffer[_collection][_tokenId];
         _mint(_lender, tokenCounter);
         IDelegationRegistry(delegationRegistry).delegateForToken(
@@ -77,7 +77,6 @@ contract CacaoVault is ERC721 {
     function transferFrom(address to, uint256 tokenId) public {
         Offer memory offer = utilityTokenToOffer[tokenId];
         address owner = ERC721.ownerOf(tokenId);
-        ERC721.transferFrom(owner, to, tokenId);
         IDelegationRegistry(delegationRegistry).delegateForToken(
             owner,
             offer.collection,
@@ -90,6 +89,7 @@ contract CacaoVault is ERC721 {
             tokenId,
             true
         );
+        ERC721.transferFrom(owner, to, tokenId);
     }
 
     function transferDelegate(
@@ -111,7 +111,7 @@ contract CacaoVault is ERC721 {
     ) external {
         Offer memory offer = tokenIdToOffer[collection][tokenId];
         require(msg.sender == offer.lender || msg.sender == cacao, "Not owner");
-        IERC721(collection).safeTransferFrom(
+        ERC721(collection).safeTransferFrom(
             address(this),
             ownerAddress,
             tokenId

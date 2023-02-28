@@ -21,6 +21,10 @@ describe("Cacao", () => {
             "DelegationRegistry",
             CacaoVault.address
         )
+        console.log("Cacao  =  " + Cacao.address)
+        console.log("CacaoVault  =  " + CacaoVault.address)
+        console.log("FBAYC  =  " + Fbayc.address)
+        console.log("Delegator  =  " + Delegator.address)
         await CacaoVault.setMarketplaceAddress(Cacao.address)
 
         collection = Fbayc.address
@@ -128,7 +132,6 @@ describe("Cacao", () => {
         beforeEach(async () => {
             await Fbayc.safeMint(amount, deployer.address)
             await Fbayc.setApprovalForAll(CacaoVault.address, true)
-
             await Cacao.createOffer(price, tokenId, collection, duration)
         })
 
@@ -174,12 +177,6 @@ describe("Cacao", () => {
         })
 
         it("check if delegation was successful", async () => {
-            await Delegator.delegateForToken(
-                borrower.address,
-                Fbayc.address,
-                tokenId,
-                true
-            )
             console.log(deployer.address)
             console.log(
                 "delegation for borrower before = " +
@@ -199,12 +196,24 @@ describe("Cacao", () => {
                         tokenId
                     ))
             )
-            console.log(await CacaoVault.ownerOf(utilityTokenId))
+            Delegator.on(
+                "DelegateForToken",
+                (vault, delegate, contract_, tokenId, value) => {
+                    console.log("VAULT = " + vault)
+                }
+            )
+            console.log(
+                "UToken owner before  =  " +
+                    (await CacaoVault.ownerOf(utilityTokenId))
+            )
             await borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
                 value: price,
             })
-            console.log("borrower " + borrower.address)
-            console.log(await CacaoVault.ownerOf(utilityTokenId))
+            console.log("borrower  =  " + borrower.address)
+            console.log(
+                "UToken owner after  =  " +
+                    (await CacaoVault.ownerOf(utilityTokenId))
+            )
             console.log(
                 "delegation for borrower after = " +
                     (await Delegator.checkDelegateForToken(

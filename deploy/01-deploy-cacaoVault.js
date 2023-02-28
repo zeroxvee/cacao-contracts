@@ -9,7 +9,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     ).address
     const delegatorGoerli = "0x00000000000076A84feF008CDAbe6409d2FE638B"
     const delegator =
-        network.config.chainId == 31337 ? delegatorLocal : delegatorGoerli
+        network.config.chainId == 31337 || 1337
+            ? delegatorLocal
+            : delegatorGoerli
 
     const name = "CacaoVaultToken"
     const symbol = "CVT"

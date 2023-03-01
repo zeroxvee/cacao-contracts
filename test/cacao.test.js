@@ -21,10 +21,7 @@ describe("Cacao", () => {
             "DelegationRegistry",
             CacaoVault.address
         )
-        console.log("Cacao  =  " + Cacao.address)
-        console.log("CacaoVault  =  " + CacaoVault.address)
-        console.log("FBAYC  =  " + Fbayc.address)
-        console.log("Delegator  =  " + Delegator.address)
+
         await CacaoVault.setMarketplaceAddress(Cacao.address)
 
         collection = Fbayc.address
@@ -93,7 +90,7 @@ describe("Cacao", () => {
             expect(offer.duration).equal(duration)
             expect(offer.collection).equal(Fbayc.address)
             expect(offer.lender).equal(deployer.address)
-            expect(offer.borrower).equal(ethers.constants.AddressZero)
+            expect(offer.borrower).equal(deployer.address)
             expect(offer.status).equal(1)
             expect(offer.utilityTokenId).equal(1)
         })
@@ -101,8 +98,8 @@ describe("Cacao", () => {
         it("deposits NFT, mints U-token and initializes data", async () => {
             await Cacao.createOffer(price, tokenId, collection, duration)
             expect(await Fbayc.ownerOf(tokenId)).to.be.equal(CacaoVault.address)
-            const offer = Cacao.getOfferById(offerId)
-            expect(offer.utilityToken).equal(1)
+            const offer = await Cacao.getOfferById(offerId)
+            expect(offer.utilityTokenId).equal(1)
             expect(await CacaoVault.ownerOf(tokenId)).equal(deployer.address)
         })
 
@@ -177,61 +174,9 @@ describe("Cacao", () => {
         })
 
         it("check if delegation was successful", async () => {
-            console.log(deployer.address)
-            console.log(
-                "delegation for borrower before = " +
-                    (await Delegator.checkDelegateForToken(
-                        borrower.address,
-                        CacaoVault.address,
-                        Fbayc.address,
-                        tokenId
-                    ))
-            )
-            console.log(
-                "delegation for depositor before = " +
-                    (await Delegator.checkDelegateForToken(
-                        deployer.address,
-                        CacaoVault.address,
-                        Fbayc.address,
-                        tokenId
-                    ))
-            )
-            Delegator.on(
-                "DelegateForToken",
-                (vault, delegate, contract_, tokenId, value) => {
-                    console.log("VAULT = " + vault)
-                }
-            )
-            console.log(
-                "UToken owner before  =  " +
-                    (await CacaoVault.ownerOf(utilityTokenId))
-            )
             await borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
                 value: price,
             })
-            console.log("borrower  =  " + borrower.address)
-            console.log(
-                "UToken owner after  =  " +
-                    (await CacaoVault.ownerOf(utilityTokenId))
-            )
-            console.log(
-                "delegation for borrower after = " +
-                    (await Delegator.checkDelegateForToken(
-                        borrower.address,
-                        CacaoVault.address,
-                        Fbayc.address,
-                        tokenId
-                    ))
-            )
-            console.log(
-                "delegation for depositor after = " +
-                    (await Delegator.checkDelegateForToken(
-                        deployer.address,
-                        CacaoVault.address,
-                        Fbayc.address,
-                        tokenId
-                    ))
-            )
             expect(
                 await Delegator.checkDelegateForToken(
                     borrower.address,

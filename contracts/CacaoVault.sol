@@ -24,7 +24,7 @@ contract CacaoVault is ERC721 {
     uint256 tokenCounter = 1;
 
     // NFT collection address => tokenID => Owner address
-    mapping(address => mapping(uint256 => Offer)) tokenIdToOffer;
+    // mapping(address => mapping(uint256 => Offer)) tokenIdToOffer;
 
     mapping(uint256 => Offer) utilityTokenToOffer;
 
@@ -36,7 +36,6 @@ contract CacaoVault is ERC721 {
         uint256 duration;
         address collection;
         uint256 tokenId;
-        uint256 utilityTokenId;
     }
 
     function setMarketplaceAddress(address _cacao) external {
@@ -57,7 +56,6 @@ contract CacaoVault is ERC721 {
     ) external returns (uint256) {
         require(msg.sender == cacao, "Not owner");
         ERC721(_collection).transferFrom(_lender, address(this), _tokenId);
-        Offer memory newOffer = tokenIdToOffer[_collection][_tokenId];
         _mint(_lender, tokenCounter);
         IDelegationRegistry(delegationRegistry).delegateForToken(
             _lender,
@@ -66,55 +64,51 @@ contract CacaoVault is ERC721 {
             true
         );
 
-        uint256 utilityToken = tokenCounter;
+        Offer storage newOffer = utilityTokenToOffer[tokenCounter];
         newOffer.lender = _lender;
+        newOffer.collection = _collection;
+        newOffer.tokenId = _tokenId;
         newOffer.duration = _duration;
-        newOffer.utilityTokenId = tokenCounter++;
+
+        uint256 utilityToken = tokenCounter++;
 
         return utilityToken;
     }
 
-    function transferFrom(address to, uint256 tokenId) public {
-        Offer memory offer = utilityTokenToOffer[tokenId];
-        address owner = ERC721.ownerOf(tokenId);
+    function transferFrom(
+        address from,
+        address to,
+        uint256 utilityTokenId
+    ) public override {
+        Offer memory offer = utilityTokenToOffer[utilityTokenId];
+        // delegation rights for lended NFT
         IDelegationRegistry(delegationRegistry).delegateForToken(
-            owner,
+            from,
             offer.collection,
-            tokenId,
+            offer.tokenId,
             false
         );
         IDelegationRegistry(delegationRegistry).delegateForToken(
             to,
             offer.collection,
-            tokenId,
+            offer.tokenId,
             true
         );
-        ERC721.transferFrom(owner, to, tokenId);
+        ERC721.transferFrom(from, to, utilityTokenId);
     }
-
-    function transferDelegate(
-        address from,
-        address to,
-        address collection,
-        uint256 tokenId
-    ) public {}
 
     /*
      *   When called by NFT asset owner => burns NFT-U token,
      *   removes any delegation records,
      *   returns NFT assest to the owner
      */
-    function withdrawNft(
-        address collection,
-        uint256 tokenId,
-        address ownerAddress
-    ) external {
-        Offer memory offer = tokenIdToOffer[collection][tokenId];
+    function withdrawNft(uint256 utilityTokenId) external {
+        Offer memory offer = utilityTokenToOffer[utilityTokenId];
         require(msg.sender == offer.lender || msg.sender == cacao, "Not owner");
-        ERC721(collection).safeTransferFrom(
+        ERC721(offer.collection).safeTransferFrom(
             address(this),
-            ownerAddress,
-            tokenId
+            offer.lender,
+            offer.tokenId
         );
     }
 }

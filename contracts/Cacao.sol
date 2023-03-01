@@ -83,8 +83,7 @@ contract Cacao is Ownable {
 
     event OfferAccepted(
         uint256 id,
-        address vault,
-        address delegate,
+        address borrower,
         address collection,
         uint256 tokenId
     );
@@ -139,7 +138,7 @@ contract Cacao is Ownable {
             startTime: block.timestamp,
             duration: _duration,
             lender: msg.sender,
-            borrower: address(0),
+            borrower: msg.sender,
             utilityTokenId: _utilityTokenId,
             status: OfferStatus.AVAILABLE
         });
@@ -195,18 +194,16 @@ contract Cacao is Ownable {
             revert Cacao__WrongAddress();
         }
 
-        CacaoVault(cacaoVault).transferFrom(msg.sender, offer.utilityTokenId);
+        CacaoVault(cacaoVault).transferFrom(
+            offer.borrower,
+            msg.sender,
+            offer.utilityTokenId
+        );
         uint256 paymentFee = (msg.value * fee) / 100;
         balances[offer.lender] += (msg.value - paymentFee);
         balances[address(this)] += paymentFee;
         offer.status = OfferStatus.EXECUTED;
-        emit OfferAccepted(
-            _offerId,
-            msg.sender,
-            offer.lender,
-            _collection,
-            _tokenId
-        );
+        emit OfferAccepted(_offerId, msg.sender, _collection, _tokenId);
     }
 
     function withdrawFees() public onlyOwner {
@@ -249,7 +246,7 @@ contract Cacao is Ownable {
 
         delete tokenToOfferId[_collection][_tokenId];
         offer.status = OfferStatus.COMPLETED;
-        CacaoVault(cacaoVault).withdrawNft(_collection, _tokenId, msg.sender);
+        CacaoVault(cacaoVault).withdrawNft(offer.utilityTokenId);
     }
 
     ////////////////////////*** READ *** ///////////////////////

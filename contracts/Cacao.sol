@@ -229,8 +229,6 @@ contract Cacao is Ownable {
 
     /*
      *
-     *   Only can withdraw if deal has been completed
-     *   v1 - doesn't allow withdrawal until rent duration has passed
      */
     function withdrawNft(address _collection, uint256 _tokenId) public {
         uint256 offerId = tokenToOfferId[_collection][_tokenId];
@@ -243,6 +241,9 @@ contract Cacao is Ownable {
         if (offer.lender != msg.sender) {
             revert Cacao__NotOwner();
         }
+
+        // Calc a way to find percentage of amount to refund to borrower and to lender
+        // if (offer.expiration > block.timestamp) {}
 
         delete tokenToOfferId[_collection][_tokenId];
         offer.status = OfferStatus.COMPLETED;

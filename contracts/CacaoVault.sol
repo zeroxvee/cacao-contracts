@@ -51,7 +51,7 @@ contract CacaoVault is ERC721 {
     function depositToVault(
         address _collection,
         uint256 _tokenId,
-        uint256 _duration,
+        uint256 _expiration,
         address _lender
     ) external returns (uint256) {
         require(msg.sender == cacao, "Not owner");
@@ -68,7 +68,7 @@ contract CacaoVault is ERC721 {
         newOffer.lender = _lender;
         newOffer.collection = _collection;
         newOffer.tokenId = _tokenId;
-        newOffer.duration = _duration;
+        newOffer.duration = _expiration;
 
         uint256 utilityToken = tokenCounter++;
 

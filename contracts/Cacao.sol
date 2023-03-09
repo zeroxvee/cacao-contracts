@@ -49,7 +49,7 @@ contract Cacao is Ownable {
         uint256 tokenId;
         uint256 price;
         uint256 startTime;
-        uint256 duration;
+        uint256 expiration;
         address collection;
         uint256 utilityTokenId;
         address lender;
@@ -77,7 +77,7 @@ contract Cacao is Ownable {
         uint256 price,
         uint256 tokenId,
         address collection,
-        uint256 duration,
+        uint256 expiration,
         address lender
     );
 
@@ -122,11 +122,11 @@ contract Cacao is Ownable {
         if (_duration < 1 days) {
             revert Cacao__WrongInput();
         }
-
+        uint256 _expiration = block.timestamp + _duration;
         uint256 _utilityTokenId = CacaoVault(cacaoVault).depositToVault(
             _collection,
             _tokenId,
-            _duration,
+            _expiration,
             msg.sender
         );
 
@@ -136,7 +136,7 @@ contract Cacao is Ownable {
             tokenId: _tokenId,
             price: _price,
             startTime: block.timestamp,
-            duration: _duration,
+            expiration: _expiration,
             lender: msg.sender,
             borrower: msg.sender,
             utilityTokenId: _utilityTokenId,
@@ -154,7 +154,7 @@ contract Cacao is Ownable {
             _price,
             _tokenId,
             _collection,
-            _duration,
+            _expiration,
             msg.sender
         );
         offerCounter++;
@@ -236,7 +236,7 @@ contract Cacao is Ownable {
         uint256 offerId = tokenToOfferId[_collection][_tokenId];
         Offer memory offer = offers[offerId];
 
-        if (offer.startTime + offer.duration > block.timestamp) {
+        if (offer.expiration > block.timestamp) {
             revert Cacao__OfferIsActive();
         }
 

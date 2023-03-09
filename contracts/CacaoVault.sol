@@ -70,9 +70,8 @@ contract CacaoVault is ERC721 {
         newOffer.tokenId = _tokenId;
         newOffer.duration = _expiration;
 
-        uint256 utilityToken = tokenCounter++;
-
-        return utilityToken;
+        // uint256 utilityToken = tokenCounter++;
+        return tokenCounter++;
     }
 
     function transferFrom(
@@ -98,9 +97,14 @@ contract CacaoVault is ERC721 {
     }
 
     /*
-     *   When called by NFT asset owner => burns NFT-U token,
-     *   removes any delegation records,
-     *   returns NFT assest to the owner
+     *  When called by NFT asset owner => burns NFT-U token,
+     *  removes any delegation records,
+     *  returns NFT assest to the owner
+     *
+     *  !! NFT OWNER can withdraw his NFT at any moment by interacting with the CacaoVault
+     *  !! BUT by doing so he won't get any ETH for his lending offers
+     *  !! This is done for the case the Cacao Marketplace gets compromised and shit is fucked up
+     *  !! Otherwise users we'll be interacting thru the Cacao contract/frontend
      */
     function withdrawNft(uint256 utilityTokenId) external {
         Offer memory offer = utilityTokenToOffer[utilityTokenId];
@@ -110,5 +114,6 @@ contract CacaoVault is ERC721 {
             offer.lender,
             offer.tokenId
         );
+        delete utilityTokenToOffer[utilityTokenId];
     }
 }

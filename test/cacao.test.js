@@ -87,7 +87,7 @@ describe("Cacao", () => {
             expect(offer.tokenId).equal(tokenId)
             expect(offer.price).equal(price)
             expect(offer.startTime).equal(timestamp)
-            expect(offer.duration).equal(duration)
+            expect(offer.expiration).equal(duration + timestamp)
             expect(offer.collection).equal(Fbayc.address)
             expect(offer.lender).equal(deployer.address)
             expect(offer.borrower).equal(deployer.address)

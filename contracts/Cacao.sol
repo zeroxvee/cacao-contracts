@@ -6,12 +6,11 @@ import "./CacaoVault.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-/*TODO:  1. Write funciton that recevies info out of contract to invoke delegateForToken
- *       2. keep all the active offers that are being delegated
- *       3. make all the functions requirements that keep ETH, track time
- *       4. If delegation was stopped by the Lender, then ETH returned to the borrower
- *       5. after delegation time has passed, Lender can withdraw his 90%, 10% will stay or transfered to Cacao.
- *       6. Implement Royalties so NFT authors also benefit from every rent.
+/*  TODO:
+ *
+ *  1. If delegation was stopped by the Lender, then some ETH returned to the borrower
+ *  2. after delegation time has passed, Lender can withdraw his 90%, 10% will stay or transfered to Cacao.
+ *  3. Implement Royalties so NFT authors also benefit from every rent.
  *
  */
 error Cacao__WrongIdNumber();

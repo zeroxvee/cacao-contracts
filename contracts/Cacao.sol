@@ -23,8 +23,9 @@ error Cacao__OfferNotAvailable();
 error Cacao__WrongAddress();
 error Cacao__OfferIsActive();
 
-/*
- *   @dev cacao v1.0
+/**
+ * @title Cacao v1.0 - ERC721-U marketplace contract
+ * @author @zeroxvee
  */
 contract Cacao is Ownable {
     enum OfferStatus {
@@ -39,6 +40,7 @@ contract Cacao is Ownable {
     address public cacaoVault;
     uint256 public offerCounter = 1;
 
+    // Cacao Marketplace fee
     // 0 - 10%
     uint256 public fee;
 
@@ -103,6 +105,13 @@ contract Cacao is Ownable {
     ////////////////////////*** WRITE *** ///////////////////////
     /////////////////////////////////////////////////////////////
 
+    /**
+     *
+     * @param _price by lender in ETH
+     * @param _tokenId tokenId of lended token
+     * @param _collection address of lended NFT collection
+     * @param _duration of the offer in seconds
+     */
     function createOffer(
         uint256 _price,
         uint256 _tokenId,
@@ -159,6 +168,14 @@ contract Cacao is Ownable {
         offerCounter++;
     }
 
+    /**
+     *
+     * @notice cancel listed offer before it was accepted and therefore
+     *         not charged any fees
+     * @param _collection address of lended NFT collection
+     * @param _tokenId token ID of lended token
+     * @param _offerId listed offer ID
+     */
     function cancelOffer(
         address _collection,
         uint256 _tokenId,
@@ -177,6 +194,13 @@ contract Cacao is Ownable {
         emit OfferCanceled(_collection, _tokenId, _offerId);
     }
 
+    /**
+     *
+     * @notice accepts listed NFT-U offer on behalf of borrower
+     * @param _collection address of borrowed NFT collection
+     * @param _tokenId token ID of borrowed token
+     * @param _offerId listed offer ID
+     */
     function acceptOffer(
         address _collection,
         uint256 _tokenId,
@@ -205,17 +229,30 @@ contract Cacao is Ownable {
         emit OfferAccepted(_offerId, msg.sender, _collection, _tokenId);
     }
 
+    /**
+     *
+     * @notice withdraw funds from the contract
+     * can only be called by the contract owner
+     */
     function withdrawFees() public onlyOwner {
         uint256 balance = balances[address(this)];
         _withdraw(balance);
     }
 
-    function withdrawByLender() public {
+    /**
+     *
+     * @notice withdraw accumulated funds by lender/borrower
+     */
         uint256 balance = balances[msg.sender];
         _withdraw(balance);
     }
 
-    function _withdraw(uint256 balance) internal {
+    /**
+     *
+     * @notice withdraw fx core
+     * @param recipient address of funds recipient
+     * @param balance balance in wei
+     */
         balance = address(this).balance;
         if (balance == 0) {
             revert Cacao__NotEnoughFunds();
@@ -226,8 +263,11 @@ contract Cacao is Ownable {
         if (!callResult) revert Cacao__TransferFailed();
     }
 
-    /*
+    /**
      *
+     * @notice sends NFT back to the lender and processing fees and balances
+     * @param _collection address of NFT collection
+     * @param _tokenId NFT token ID
      */
     function withdrawNft(address _collection, uint256 _tokenId) public {
         uint256 offerId = tokenToOfferId[_collection][_tokenId];

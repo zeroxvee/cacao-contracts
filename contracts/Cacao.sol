@@ -226,9 +226,9 @@ contract Cacao is Ownable {
             msg.sender,
             offer.utilityTokenId
         );
-        uint256 paymentFee = (msg.value * fee) / 100;
-        balances[offer.lender] += (msg.value - paymentFee);
-        balances[address(this)] += paymentFee;
+
+        // Tracking ETH for each lender to process on withdrawal later
+        // balances[offer.lender] += msg.value;
         offer.status = OfferStatus.EXECUTED;
         emit OfferAccepted(_offerId, msg.sender, _collection, _tokenId);
     }
@@ -240,15 +240,16 @@ contract Cacao is Ownable {
      */
     function withdrawFees() public onlyOwner {
         uint256 balance = balances[address(this)];
-        _withdraw(balance);
+        _withdraw(msg.sender, balance);
     }
 
     /**
      *
      * @notice withdraw accumulated funds by lender/borrower
      */
+    function withdrawByUser() public {
         uint256 balance = balances[msg.sender];
-        _withdraw(balance);
+        _withdraw(msg.sender, balance);
     }
 
     /**
@@ -257,11 +258,12 @@ contract Cacao is Ownable {
      * @param recipient address of funds recipient
      * @param balance balance in wei
      */
+    function _withdraw(address recipient, uint256 balance) internal {
         balance = address(this).balance;
         if (balance == 0) {
             revert Cacao__NotEnoughFunds();
         }
-        (bool callResult, ) = payable(msg.sender).call{
+        (bool callResult, ) = payable(recipient).call{
             value: address(this).balance
         }("");
         if (!callResult) revert Cacao__TransferFailed();

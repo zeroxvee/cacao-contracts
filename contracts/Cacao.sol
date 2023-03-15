@@ -44,6 +44,10 @@ contract Cacao is Ownable {
     // 0 - 10%
     uint256 public fee;
 
+    // fee for lenders who break the offer withour waiting till expiration
+    // 10 - 50%
+    uint256 public unexpiredOfferFee = 30;
+
     // Offers object
     struct Offer {
         uint256 offerId;
@@ -66,7 +70,7 @@ contract Cacao is Ownable {
     mapping(address => Offer[]) offersByLender;
 
     // keeping track of Lenders and Marketplace balances
-    mapping(address => uint256) balances;
+    mapping(address => uint256) private balances;
 
     // mapping for quick checks whether offer was already created
     // NFT address => tokenId => offerId
@@ -281,8 +285,38 @@ contract Cacao is Ownable {
             revert Cacao__NotOwner();
         }
 
-        // Calc a way to find percentage of amount to refund to borrower and to lender
-        // if (offer.expiration > block.timestamp) {}
+        uint256 duration = offer.expiration - offer.startTime;
+        uint256 timeLeft = offer.expiration - block.timestamp;
+
+        // possibly the section below needs to be redone to reflect
+        // ALL the use cases
+
+        // coefficient of time passed to expiration, 0 - 100%
+        uint256 coefficient = (timeLeft * 100) / duration;
+
+        // if time passed% >= than fee% incentive than process refund to borrower
+        if (coefficient >= unexpiredOfferFee) {
+            // % incentive for lenders to hold offer till expiration
+            uint256 refund = (offer.price * unexpiredOfferFee) / 100;
+
+            // Cacao: taking fee only for the time offer lasted
+            uint256 paymentFee = ((offer.price - refund) * fee) / 100;
+
+            // final amount for lender to withdraw later
+            uint256 payment = offer.price - refund - paymentFee;
+
+            // updating balances
+            balances[offer.lender] += payment;
+            balances[address(this)] += payment;
+            balances[offer.borrower] += refund;
+        } else {
+            // else take fees and update balances without refunds
+            uint256 paymentFee = (offer.price * fee) / 100;
+            uint256 payment = offer.price - paymentFee;
+
+            balances[offer.lender] += payment;
+            balances[address(this)] += payment;
+        }
 
         delete tokenToOfferId[_collection][_tokenId];
         offer.status = OfferStatus.COMPLETED;

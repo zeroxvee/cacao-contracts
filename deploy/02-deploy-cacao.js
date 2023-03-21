@@ -1,4 +1,6 @@
 const { network, ethers } = require("hardhat")
+const { verify } = require("../utils/verify")
+const setCacaoMarketplace = require("../scripts/setCacaoMarketplace")
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
@@ -9,9 +11,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     ).address
     const delegatorGoerli = "0x00000000000076A84feF008CDAbe6409d2FE638B"
     const delegator =
-        network.config.chainId == 31337 || 1337
-            ? delegatorLocal
-            : delegatorGoerli
+        chainId == 31337 || 1337 ? delegatorLocal : delegatorGoerli
     const fee = 3
     const cacaoVault = (await ethers.getContract("CacaoVault", deployer))
         .address
@@ -25,6 +25,15 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     })
 
     log("------------------------------------------------------")
+
+    await setCacaoMarketplace()
+    if (
+        !(chainId === 31337 || chainId === 1337) &&
+        process.env.ETHERSCAN_API_KEY
+    ) {
+        log("Verifying")
+        await verify(cacao.address, args)
+    }
 }
 
 module.exports.tags = ["cacao", "all", "cacaos"]

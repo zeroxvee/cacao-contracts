@@ -10,6 +10,13 @@ import "./IDelegationRegistry.sol";
  */
 
 contract CacaoVault is ERC721 {
+    using Strings for uint256;
+
+    address public delegationRegistry;
+    address private cacao;
+    uint256 tokenCounter = 1;
+    string private baseURI;
+
     constructor(
         string memory _name,
         string memory _symbol,
@@ -18,10 +25,6 @@ contract CacaoVault is ERC721 {
         delegationRegistry = _delegationRegistry;
         _mint(msg.sender, 0);
     }
-
-    address public delegationRegistry;
-    address private cacao;
-    uint256 tokenCounter = 1;
 
     // NFT collection address => tokenID => Owner address
     // mapping(address => mapping(uint256 => Offer)) tokenIdToOffer;
@@ -115,5 +118,20 @@ contract CacaoVault is ERC721 {
             offer.tokenId
         );
         delete utilityTokenToOffer[utilityTokenId];
+    }
+
+    function setURI(string memory _baseURI) external {
+        baseURI = _baseURI;
+    }
+
+    function tokenURI(
+        uint256 tokenId
+    ) public view override returns (string memory) {
+        _requireMinted(tokenId);
+
+        return
+            bytes(baseURI).length > 0
+                ? string(abi.encodePacked(baseURI, tokenId.toString()))
+                : "";
     }
 }

@@ -161,11 +161,9 @@ describe("Cacao", () => {
         })
 
         it("transfers U-token to new borrower", async () => {
-            console.log("works before accept")
             await borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
                 value: price,
             })
-            console.log("works after accept")
             const utilityTokenId = (await Cacao.getOfferById(offerId))
                 .utilityTokenId
             expect(await CacaoVault.ownerOf(utilityTokenId)).equal(
@@ -192,6 +190,8 @@ describe("Cacao", () => {
                 value: price,
             })
 
+            await network.provider.send("evm_increaseTime", [duration])
+            await Cacao.withdrawNft(collection, tokenId)
             const balance = BigInt(price - (price * 3) / 100)
             expect(await Cacao.getEthBalance(deployer.address)).equal(balance)
         })
@@ -200,7 +200,8 @@ describe("Cacao", () => {
             await borrowerCacao.acceptOffer(Fbayc.address, tokenId, offerId, {
                 value: price,
             })
-
+            await network.provider.send("evm_increaseTime", [duration])
+            await Cacao.withdrawNft(collection, tokenId)
             const balance = BigInt((price * 3) / 100)
             expect(await Cacao.getEthBalance(Cacao.address)).equal(balance)
         })

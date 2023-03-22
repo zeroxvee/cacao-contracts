@@ -69,7 +69,7 @@ contract Cacao is Ownable {
     // mapping(address => mapping ()=> uint256)) public offers;
     mapping(address => Offer[]) offersByLender;
 
-    // keeping track of Lenders and Marketplace balances
+    // keeping track of Lenders, borrowers and Marketplace balances
     mapping(address => uint256) private balances;
 
     // mapping for quick checks whether offer was already created
@@ -227,6 +227,12 @@ contract Cacao is Ownable {
             offer.utilityTokenId
         );
 
+        // initial fees calculation in case if offer is completed without further actions
+        // from lender or borrower
+        uint256 cacaoFee = (offer.price * fee) / 100;
+        balances[address(this)] += cacaoFee;
+        balances[offer.lender] += offer.price - cacaoFee;
+
         // Tracking ETH for each lender to process on withdrawal later
         // balances[offer.lender] += msg.value;
         offer.status = OfferStatus.EXECUTED;
@@ -312,6 +318,10 @@ contract Cacao is Ownable {
 
             // final amount for lender to withdraw later
             uint256 lenderFee = offer.price - borrowerRefund - cacaoFee;
+
+            // removing initial precalculated fees from balances
+            balances[offer.lender] -= offer.price - cacaoFee;
+            balances[address(this)] -= cacaoFee;
 
             // updating balances
             balances[offer.lender] += lenderFee;

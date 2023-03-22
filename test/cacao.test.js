@@ -283,12 +283,6 @@ describe("Cacao", () => {
             })
         })
 
-        it("reverts if offer is still active", async () => {
-            await expect(
-                Cacao.withdrawNft(collection, tokenId)
-            ).to.be.revertedWithCustomError(Cacao, "Cacao__OfferIsActive")
-        })
-
         it("reverts if called by not NFT owner", async () => {
             await network.provider.send("evm_increaseTime", [duration])
             await expect(

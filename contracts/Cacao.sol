@@ -279,45 +279,44 @@ contract Cacao is Ownable {
         uint256 offerId = tokenToOfferId[_collection][_tokenId];
         Offer memory offer = offers[offerId];
 
-        if (offer.expiration > block.timestamp) {
-            revert Cacao__OfferIsActive();
-        }
-
         if (offer.lender != msg.sender) {
             revert Cacao__NotOwner();
         }
 
-        uint256 duration = offer.expiration - offer.startTime;
-        uint256 timeLeft = offer.expiration - block.timestamp;
+        // !! Add a user case if lender never takes his NFT
+        // !! possibly process it when offer is created
+        // !! and balance updated below here on withdrawal
+        unchecked {
+            uint256 duration = offer.expiration - offer.startTime;
+            uint256 timePassed = block.timestamp - offer.startTime;
 
-        // possibly the section below needs to be redone to reflect
-        // ALL the use cases
+            // coefficient of the time past from total time, 0 - 100%
+            uint256 coefficient = (timePassed * 100) / duration;
 
-        // coefficient of time passed to expiration, 0 - 100%
-        uint256 coefficient = (timeLeft * 100) / duration;
+            // if coefficient >= 100, meaning the offer expired, then 0
+            // otherwise extra fee of unexpiredOfferFee %
+            uint256 incompleteOfferFee = coefficient >= 100
+                ? 0
+                : (offer.price * unexpiredOfferFee) / 100;
 
-        // if time passed% >= than fee% incentive than process refund to borrower
-        if (coefficient >= unexpiredOfferFee) {
-            // % incentive for lenders to hold offer till expiration
-            uint256 refund = (offer.price * unexpiredOfferFee) / 100;
+            // value for the actual time passed
+            uint256 actualOfferValue = (offer.price * coefficient) / 100;
 
             // Cacao: taking fee only for the time offer lasted
-            uint256 paymentFee = ((offer.price - refund) * fee) / 100;
+            uint256 cacaoFee = (actualOfferValue * fee) / 100;
+
+            // borrowers total refund for cancelation of active offer
+            uint256 borrowerRefund = offer.price -
+                actualOfferValue +
+                incompleteOfferFee;
 
             // final amount for lender to withdraw later
-            uint256 payment = offer.price - refund - paymentFee;
+            uint256 lenderFee = offer.price - borrowerRefund - cacaoFee;
 
             // updating balances
-            balances[offer.lender] += payment;
-            balances[address(this)] += payment;
-            balances[offer.borrower] += refund;
-        } else {
-            // else take fees and update balances without refunds
-            uint256 paymentFee = (offer.price * fee) / 100;
-            uint256 payment = offer.price - paymentFee;
-
-            balances[offer.lender] += payment;
-            balances[address(this)] += payment;
+            balances[offer.lender] += lenderFee;
+            balances[address(this)] += cacaoFee;
+            balances[offer.borrower] += borrowerRefund;
         }
 
         delete tokenToOfferId[_collection][_tokenId];

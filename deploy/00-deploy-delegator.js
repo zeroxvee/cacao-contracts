@@ -18,7 +18,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         })
     } else {
         console.log(
-            "<< deploying on chain = %d - using deployed delegator >>",
+            "---  deploying on chain = %d - using deployed delegator  ---",
             chainId
         )
     }

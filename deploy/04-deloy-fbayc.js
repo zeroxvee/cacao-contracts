@@ -1,4 +1,5 @@
 const { network } = require("hardhat")
+const { verify } = require("../utils/verify")
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
@@ -15,9 +16,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             log: true,
             waitConfirmations: network.config.blockConfirmations || 1,
         })
+        await verify(fbayc.address, args)
     } else {
         console.log(
-            "<< deploying on chain = %d - using predeployed FBAYC contract = %s >>",
+            "---  deploying on chain = %d - using predeployed FBAYC contract = %s  ---",
             chainId,
             (await ethers.getContract("FakeBoredApeYachtClub", deployer))
                 .address

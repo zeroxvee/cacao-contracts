@@ -30,7 +30,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         !(chainId === 31337 || chainId === 1337) &&
         process.env.ETHERSCAN_API_KEY
     ) {
-        log("Verifying")
         await verify(cacao.address, args)
     }
     log("------------------------------------------------------")

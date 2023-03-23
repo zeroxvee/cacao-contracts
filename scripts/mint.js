@@ -2,10 +2,10 @@ const { network, getNamedAccounts } = require("hardhat")
 
 async function main() {
     const { deployer } = await getNamedAccounts()
-    const anotherWallet = "0x459e213D8B5E79d706aB22b945e3aF983d51BC4C"
+    const anotherWallet = "0x70666ADbCEF58bb8850b70C897892d14fAD477b9"
     const fbayc = await ethers.getContract("FakeBoredApeYachtClub", deployer)
 
-    const mintAmount = 5
+    const mintAmount = 2
     for (let i = 0; i < mintAmount; i++) {
         await fbayc.safeMint(anotherWallet)
     }

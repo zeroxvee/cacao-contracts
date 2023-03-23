@@ -8,7 +8,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const args = []
 
     if (chainId === 31337 || chainId === 1337) {
-        console.log("<< Local chain detected, deployed FBAYC locally >>")
+        console.log("---  Local chain detected, deploying FBAYC locally  ---")
         const fbayc = await deploy("FakeBoredApeYachtClub", {
             from: deployer,
             args: args,
@@ -17,8 +17,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         })
     } else {
         console.log(
-            "<< deploying on chain = %d - using predeployed FBAYC contract >>",
-            chainId
+            "<< deploying on chain = %d - using predeployed FBAYC contract = %s >>",
+            chainId,
+            (await ethers.getContract("FakeBoredApeYachtClub", deployer))
+                .address
         )
     }
     log("------------------------------------------------------")

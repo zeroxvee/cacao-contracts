@@ -7,7 +7,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const args = []
     if (chainId === 31337 || chainId === 1337) {
-        console.log("<< Local chain detected, deployed delegator locally >>")
+        console.log(
+            "---  Local chain detected, deploying delegator locally  ---"
+        )
         const delegator = await deploy("DelegationRegistry", {
             from: deployer,
             args: args,
@@ -20,6 +22,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             chainId
         )
     }
+    log("------------------------------------------------------")
 }
 
 module.exports.tags = ["delegator", "all"]

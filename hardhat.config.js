@@ -20,6 +20,7 @@ module.exports = {
             url: GOERLI_RPC_URL,
             accounts: [PRIVATE_KEY],
             chainId: 5,
+            blockConfirmations: 5,
         },
         "mantle-testnet": {
             url: "https://rpc.testnet.mantle.xyz/",

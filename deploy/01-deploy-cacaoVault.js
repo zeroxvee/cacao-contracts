@@ -22,14 +22,14 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         waitConfirmations: network.config.blockConfirmations || 1,
     })
 
-    log("------------------------------------------------------")
     if (
         !(chainId === 31337 || chainId === 1337) &&
         process.env.ETHERSCAN_API_KEY
     ) {
         log("Verifying")
-        await verify(cacao.address, args)
+        await verify(cacaoVault.address, args)
     }
+    log("------------------------------------------------------")
 }
 
 module.exports.tags = ["cacaoVault", "all", "cacaos"]
